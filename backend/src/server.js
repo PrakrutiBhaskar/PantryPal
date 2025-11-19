@@ -8,8 +8,6 @@ import userRoutes from "./routes/userRoutes.js";
 import cors from "cors";
 import path from "path";
 
-
-
 dotenv.config()
 
 const app = express();
@@ -38,8 +36,10 @@ app.use(
     credentials: true,
   })
 );
+const __dirname = path.resolve();
 
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+// PUBLIC folder for images
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(express.json())
 app.use(rateLimiter)

@@ -11,7 +11,6 @@ const MyRecipes = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  // Fetch user's own recipes
   const fetchMyRecipes = async () => {
     try {
       const res = await fetch(`${API_URL}/api/recipes/my`, {
@@ -21,17 +20,19 @@ const MyRecipes = () => {
       });
 
       const data = await res.json();
+      console.log("📥 RESPONSE RAW:", data); // ✅ Correct log
 
       if (!res.ok) {
         toast.error(data.message || "Failed to load your recipes");
+        return;
       }
 
-      if (Array.isArray(data)) {
-        setRecipes(data);
-        } else {
+      // FIX: Use correct key: data.recipes
+      if (Array.isArray(data.recipes)) {
+        setRecipes(data.recipes);
+      } else {
         setRecipes([]);
-        }
-
+      }
     } catch (error) {
       console.error("❌ Error loading my recipes:", error);
     } finally {
@@ -48,16 +49,13 @@ const MyRecipes = () => {
     fetchMyRecipes();
   }, []);
 
-  // Delete recipe
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this recipe?")) return;
 
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json();
@@ -90,7 +88,9 @@ const MyRecipes = () => {
 
       {recipes.length === 0 ? (
         <div className="text-center mt-20">
-          <p className="text-gray-600 text-lg">You haven't created any recipes yet.</p>
+          <p className="text-gray-600 text-lg">
+            You haven't created any recipes yet.
+          </p>
           <button
             onClick={() => navigate("/create")}
             className="btn btn-primary mt-4"
@@ -108,12 +108,11 @@ const MyRecipes = () => {
               key={recipe._id}
               className="border rounded-lg shadow-md bg-white hover:shadow-xl transition overflow-hidden"
             >
-              {/* Image */}
               <img
                 src={
                   recipe.images?.[0]
                     ? `${API_URL}/${recipe.images[0]}`
-                    : "https://via.placeholder.com/400x300?text=No+Image"
+                    : "/no-image.png"
                 }
                 onClick={() => navigate(`/recipe/${recipe._id}`)}
                 className="w-full h-52 object-cover cursor-pointer"
@@ -122,8 +121,8 @@ const MyRecipes = () => {
 
               <div className="p-4">
                 <h2
-                  className="text-xl font-semibold text-gray-800 cursor-pointer truncate"
                   onClick={() => navigate(`/recipe/${recipe._id}`)}
+                  className="text-xl font-semibold text-gray-800 cursor-pointer truncate"
                 >
                   {recipe.title}
                 </h2>
@@ -140,7 +139,6 @@ const MyRecipes = () => {
                   ❤️ Likes: {recipe.likes || 0}
                 </p>
 
-                {/* Buttons */}
                 <div className="flex justify-between mt-4">
                   <button
                     onClick={() => navigate(`/recipe/${recipe._id}`)}
@@ -149,13 +147,12 @@ const MyRecipes = () => {
                     View
                   </button>
 
-                    <button
+                  <button
                     onClick={() => navigate(`/edit/${recipe._id}`)}
                     className="btn btn-sm btn-outline"
-                    >
+                  >
                     Edit
-                    </button>
-
+                  </button>
 
                   <button
                     onClick={() => handleDelete(recipe._id)}

@@ -23,42 +23,26 @@ export async function getRecipe(req, res) {
   }
 }
 
-
-// POST /api/recipes  (create)
 export const createRecipe = async (req, res) => {
   try {
-    console.log("📦 req.body:", req.body);
-    console.log("🖼️ req.files:", req.files);
-
-    const {  title, ingredients, steps, cuisine, dietType, cookingTime } = req.body;
-
-    if (!title || !ingredients || !steps) {
-      return res.status(400).json({ message: "Title, ingredients, and steps are required" });
-    }
-
-    // map file paths (diskStorage gives .path)
-    const imagePaths = (req.files || []).map((f) => {
-      const full = f.path || f.filename || "";
-      const parts = full.split(/[/\\]/); // handle windows/backslash
-      const filename = parts.slice(-1)[0];
-      return `uploads/${filename}`;
-    });
+    const images = (req.files || []).map((file) =>
+      file.path.replace(/\\/g, "/")
+    );
 
     const recipe = await Recipe.create({
-      title: title.trim(),
-      ingredients,
-      steps,
-      cuisine: cuisine || "",
-      dietType: dietType || "",
-      cookingTime: cookingTime ? Number(cookingTime) : 0,
-      images: imagePaths,
-      user: req.user ? req.user._id : undefined,
+      title: req.body.title,
+      ingredients: req.body.ingredients,
+      steps: req.body.steps,
+      cuisine: req.body.cuisine,
+      dietType: req.body.dietType,
+      cookingTime: req.body.cookingTime,
+      images,
+      user: req.user._id,
     });
 
-    res.status(201).json({ message: "Recipe created successfully 🎉", recipe });
+    res.status(201).json({ success: true, recipe });
   } catch (err) {
-    console.error("❌ Error creating recipe:", err);
-    res.status(500).json({ message: "Server error creating recipe" });
+    res.status(500).json({ message: "Error creating recipe" });
   }
 };
 
@@ -257,20 +241,21 @@ export const getRecipes = async (req, res) => {
 // GET /api/recipes/my -> user's recipes
 export const getMyRecipes = async (req, res) => {
   try {
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    // FIX: Define userId properly
+    const userId = req.user._id;
 
-    console.log("Logged-in user:", req.user._id);
+    const recipes = await Recipe.find({ user: userId });
 
-    const recipes = await Recipe.find({ user: userId }).populate("user", "name email").sort({ createdAt: -1 });
-
-    return res.status(200).json(recipes);
+    return res.status(200).json({
+      success: true,
+      recipes,
+    });
   } catch (error) {
     console.error("🔥 Error in getMyRecipes:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
+
 
 export const getFavoriteRecipes = async (req, res) => {
   try {
