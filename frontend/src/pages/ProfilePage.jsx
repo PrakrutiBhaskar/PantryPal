@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+
+// Bakery Palette
+const PALETTE = {
+  beige: "#F3D79E",
+  brown: "#B57655",
+  cream: "#F7EEDB",
+  tan: "#E7D2AC",
+  nude: "#D0B79A",
+  caramel: "#BA8C73",
+  black: "#000000",
+};
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
@@ -17,8 +29,9 @@ const ProfilePage = () => {
   });
 
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
 
-  // Fetch profile + stats
+  // Fetch Profile + Stats
   const fetchProfile = async () => {
     try {
       const res = await fetch(`${API_URL}/api/users/profile`, {
@@ -36,7 +49,6 @@ const ProfilePage = () => {
 
       setLoading(false);
     } catch (error) {
-      console.error("Error loading profile:", error);
       toast.error("Failed to load profile");
       setLoading(false);
     }
@@ -47,20 +59,17 @@ const ProfilePage = () => {
     fetchProfile();
   }, []);
 
-  // Handle form field changes
+  // Handle Edit Form
   const handleEditChange = (e) => {
     const { name, value, files } = e.target;
+
     if (name === "profileImage") {
-      setEditForm((prev) => ({
-        ...prev,
-        profileImage: files[0],
-      }));
+      setEditForm((prev) => ({ ...prev, profileImage: files[0] }));
     } else {
       setEditForm((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  // Submit updated profile
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
 
@@ -90,43 +99,66 @@ const ProfilePage = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      console.error(error);
       toast.error("Update failed");
     }
   };
 
+  // Loading Screen
   if (loading)
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        Loading profile...
+      <div
+        className="kanit-light flex justify-center items-center min-h-screen text-xl"
+        style={{ color: PALETTE.brown }}
+      >
+        Loading profile…
       </div>
     );
 
   return (
-    <div className="px-5 md:px-16 py-10">
-      <h1 className="text-4xl font-bold text-center mb-10">My Profile</h1>
+    <div
+      className="kanit-light px-6 md:px-16 py-10"
+      style={{ background: PALETTE.cream }}
+    >
+      <h1
+        className="text-4xl font-bold text-center mb-10"
+        style={{ color: PALETTE.brown }}
+      >
+        My Profile
+      </h1>
 
       {/* Profile Card */}
-      <div className="bg-white p-6 rounded-xl shadow-lg max-w-3xl mx-auto">
-        <div className="flex flex-col items-center">
+      <div
+        className="max-w-3xl mx-auto p-8 rounded-2xl shadow-xl"
+        style={{
+          background: "white",
+          border: `1px solid ${PALETTE.tan}`,
+        }}
+      >
+        <div className="flex flex-col items-center text-center">
           <img
             src={
-                profile?.profileImage
+              profile?.profileImage
                 ? `${API_URL}/${profile.profileImage}`
                 : "/default-avatar.png"
             }
-            className="w-28 h-28 rounded-full object-cover shadow"
-            alt="profile"
-            />
+            className="w-32 h-32 rounded-full object-cover shadow-lg border"
+            alt="Profile"
+            style={{ borderColor: PALETTE.tan }}
+          />
 
-          <h2 className="text-2xl font-bold mt-4">{profile?.name}</h2>
-            <p className="text-gray-500">{profile?.email}</p>
+          <h2
+            className="text-2xl font-bold mt-4"
+            style={{ color: PALETTE.brown }}
+          >
+            {profile?.name}
+          </h2>
+          <p className="text-gray-600">{profile?.email}</p>
 
-            {profile?.bio && (
-            <p className="text-gray-600 mt-2">{profile.bio}</p>
-            )}
+          {profile?.bio && (
+            <p className="text-gray-700 mt-2 italic">{profile.bio}</p>
+          )}
 
-
+          {/* Edit Button */}
           <button
             onClick={() => {
               setEditModal(true);
@@ -137,26 +169,37 @@ const ProfilePage = () => {
                 profileImage: null,
               });
             }}
-            className="btn btn-primary mt-5"
+            className="px-5 py-2 rounded-xl shadow mt-5"
+            style={{
+              background: PALETTE.brown,
+              color: "white",
+            }}
           >
             ✏️ Edit Profile
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="grid md:grid-cols-3 gap-5 mt-8 text-center">
-          <div className="bg-gray-100 p-5 rounded-lg shadow">
-            <h3 className="text-xl font-bold">{stats?.totalRecipes}</h3>
-            <p className="text-gray-600">Recipes Created</p>
-          </div>
-          <div className="bg-gray-100 p-5 rounded-lg shadow">
-            <h3 className="text-xl font-bold">{stats?.totalLikes}</h3>
-            <p className="text-gray-600">Total Likes</p>
-          </div>
-          <div className="bg-gray-100 p-5 rounded-lg shadow">
-            <h3 className="text-xl font-bold">{stats?.totalFavorites}</h3>
-            <p className="text-gray-600">Favorites Received</p>
-          </div>
+        {/* Stats Section */}
+        <div className="grid md:grid-cols-3 gap-5 mt-10">
+          {[
+            { label: "Recipes Created", value: stats?.totalRecipes },
+            { label: "Total Likes", value: stats?.totalLikes },
+            { label: "Favorites Received", value: stats?.totalFavorites },
+          ].map((stat, i) => (
+            <div
+              key={i}
+              className="p-5 rounded-xl shadow text-center"
+              style={{
+                background: PALETTE.beige,
+                border: `1px solid ${PALETTE.tan}`,
+              }}
+            >
+              <h3 className="text-3xl font-bold" style={{ color: PALETTE.brown }}>
+                {stat.value}
+              </h3>
+              <p className="text-gray-700">{stat.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -166,10 +209,18 @@ const ProfilePage = () => {
           <form
             onSubmit={handleUpdateProfile}
             className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md"
+            style={{ border: `1px solid ${PALETTE.tan}` }}
           >
-            <h2 className="text-2xl font-bold mb-4">Edit Profile</h2>
+            <h2
+              className="text-2xl font-bold mb-4"
+              style={{ color: PALETTE.brown }}
+            >
+              Edit Profile
+            </h2>
 
-            <label className="block font-semibold">Name</label>
+            <label className="font-semibold" style={{ color: PALETTE.brown }}>
+              Name
+            </label>
             <input
               type="text"
               name="name"
@@ -178,7 +229,9 @@ const ProfilePage = () => {
               className="input input-bordered w-full mb-3"
             />
 
-            <label className="block font-semibold">Email</label>
+            <label className="font-semibold" style={{ color: PALETTE.brown }}>
+              Email
+            </label>
             <input
               type="email"
               name="email"
@@ -187,7 +240,9 @@ const ProfilePage = () => {
               className="input input-bordered w-full mb-3"
             />
 
-            <label className="block font-semibold">Bio</label>
+            <label className="font-semibold" style={{ color: PALETTE.brown }}>
+              Bio
+            </label>
             <textarea
               name="bio"
               value={editForm.bio}
@@ -195,7 +250,9 @@ const ProfilePage = () => {
               className="textarea textarea-bordered w-full mb-3"
             />
 
-            <label className="block font-semibold">Profile Image</label>
+            <label className="font-semibold" style={{ color: PALETTE.brown }}>
+              Profile Image
+            </label>
             <input
               type="file"
               name="profileImage"
@@ -204,23 +261,33 @@ const ProfilePage = () => {
               className="file-input file-input-bordered w-full mb-4"
             />
 
-            {/* Live preview */}
+            {/* Preview */}
             {editForm.profileImage && (
               <img
-                className="w-24 h-24 rounded-full object-cover mx-auto mb-3"
                 src={URL.createObjectURL(editForm.profileImage)}
+                className="w-24 h-24 rounded-full mx-auto mb-4 object-cover shadow"
               />
             )}
 
+            {/* Buttons */}
             <div className="flex justify-between mt-4">
               <button
                 type="button"
                 onClick={() => setEditModal(false)}
-                className="btn btn-outline"
+                className="px-4 py-2 rounded-xl"
+                style={{
+                  border: `1px solid ${PALETTE.tan}`,
+                  color: PALETTE.brown,
+                }}
               >
                 Cancel
               </button>
-              <button type="submit" className="btn btn-primary">
+
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl text-white"
+                style={{ background: PALETTE.brown }}
+              >
                 Save Changes
               </button>
             </div>

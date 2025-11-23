@@ -7,6 +7,8 @@ const UserSchema = new mongoose.Schema
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
     bio: { type: String, default: "" },
     profileImage: { type: String, default: "" },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Recipe" }],

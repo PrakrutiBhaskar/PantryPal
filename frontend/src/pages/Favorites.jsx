@@ -4,6 +4,17 @@ import toast from "react-hot-toast";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
+// Bakery Palette
+const PALETTE = {
+  beige: "#F3D79E",
+  brown: "#B57655",
+  cream: "#F7EEDB",
+  tan: "#E7D2AC",
+  nude: "#D0B79A",
+  caramel: "#BA8C73",
+  black: "#000000",
+};
+
 const Favorites = () => {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +25,7 @@ const Favorites = () => {
   const fetchFavorites = async () => {
     try {
       const res = await fetch(`${API_URL}/api/recipes/favorites`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.status === 401) {
@@ -26,15 +37,13 @@ const Favorites = () => {
       setRecipes(data);
       setLoading(false);
     } catch (err) {
-      console.error("❌ Error fetching favorites:", err);
       toast.error("Failed to load favorites");
+      console.error("❌ Error fetching favorites:", err);
     }
   };
 
   useEffect(() => {
-    if (!token) {
-      return navigate("/signup");
-    }
+    if (!token) return navigate("/signup");
     fetchFavorites();
   }, []);
 
@@ -42,7 +51,7 @@ const Favorites = () => {
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}/favorite`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json();
@@ -59,67 +68,113 @@ const Favorites = () => {
   };
 
   if (loading) {
-    return <div className="text-center mt-10">Loading favorites...</div>;
+    return (
+      <div
+        className="kanit-light flex justify-center items-center min-h-screen text-xl"
+        style={{ color: PALETTE.brown }}
+      >
+        Loading favorites…
+      </div>
+    );
   }
 
   return (
-    <div className="px-5 md:px-16 py-10">
-      <h1 className="text-4xl font-bold text-center mb-10 text-gray-900">
+    <div
+      className="kanit-light px-6 md:px-16 py-10"
+      style={{ background: PALETTE.cream }}
+    >
+      {/* Title */}
+      <h1
+        className="text-4xl font-bold text-center mb-10"
+        style={{ color: PALETTE.brown }}
+      >
         ⭐ Your Favorite Recipes
       </h1>
 
       {recipes.length === 0 ? (
-        <p className="text-center text-gray-600">No favorites yet.</p>
+        <div className="text-center mt-20">
+          <p className="text-lg mb-4" style={{ color: PALETTE.caramel }}>
+            You haven’t favorited any recipes yet.
+          </p>
+          <button
+            onClick={() => navigate("/home")}
+            className="px-6 py-3 rounded-xl shadow"
+            style={{
+              background: PALETTE.brown,
+              color: "white",
+              border: `1px solid ${PALETTE.tan}`,
+            }}
+          >
+            Browse Recipes 🍽️
+          </button>
+        </div>
       ) : (
         <div
-          className="grid gap-6 sm:gap-8"
+          className="grid gap-8"
           style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}
         >
           {recipes.map((recipe) => (
             <div
               key={recipe._id}
-              className="border rounded-lg shadow-md bg-white hover:shadow-xl transition cursor-pointer overflow-hidden"
+              className="rounded-2xl shadow-md overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
+              style={{
+                background: "white",
+                border: `1px solid ${PALETTE.tan}`,
+              }}
             >
+              {/* Image */}
               <img
                 src={
-                  recipe.images && recipe.images.length > 0
+                  recipe.images?.length
                     ? `${API_URL}/${recipe.images[0]}`
-                    : "https://via.placeholder.com/400x300?text=No+Image"
+                    : "/no-image.png"
                 }
                 alt={recipe.title}
-                className="w-full h-52 object-cover"
+                className="w-full h-48 object-cover"
                 onClick={() => navigate(`/recipe/${recipe._id}`)}
               />
 
-              <div className="p-4">
+              {/* Body */}
+              <div className="p-5">
                 <h3
-                  className="text-xl font-semibold text-gray-800 truncate"
+                  className="text-xl font-semibold truncate mb-2 cursor-pointer"
                   onClick={() => navigate(`/recipe/${recipe._id}`)}
+                  style={{ color: PALETTE.brown }}
                 >
                   {recipe.title}
                 </h3>
 
-                <p className="text-gray-600 text-sm mt-2 line-clamp-2">
+                <p className="text-sm opacity-80 mb-3">
                   {recipe.ingredients?.slice(0, 80)}...
                 </p>
 
+                {/* Buttons */}
                 <div className="flex justify-between items-center mt-4">
+                  
+                  {/* Remove Button */}
                   <button
                     onClick={() => handleUnfavorite(recipe._id)}
-                    className="text-red-500 hover:text-red-600 text-xl"
+                    className="px-3 py-2 text-white rounded-xl"
+                    style={{
+                      background: "#C62828",
+                    }}
                   >
                     ❌ Remove
                   </button>
 
+                  {/* View Button */}
                   <button
                     onClick={() => navigate(`/recipe/${recipe._id}`)}
-                    className="btn btn-sm btn-primary"
+                    className="px-3 py-2 rounded-xl text-white"
+                    style={{
+                      background: PALETTE.brown,
+                    }}
                   >
                     View
                   </button>
                 </div>
-              </div>
 
+              </div>
             </div>
           ))}
         </div>

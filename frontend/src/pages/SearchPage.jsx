@@ -1,274 +1,431 @@
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+// SearchPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
-const SearchPage = () => {
-  const [filters, setFilters] = useState({
-    search: "",
-    cuisine: "",
-    dietType: "",
-    maxTime: "",
-    ingredients: "",
-    sort: "newest",
-  });
-  const [recipes, setRecipes] = useState([]);
-  const [diets, setDiets] = useState([]); // 🥗 dynamic diet list
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+const PALETTE = {
+  beige: "#F3D79E",
+  brown: "#B57655",
+  cream: "#F2E3C6",
+  tan: "#E7D2AC",
+  nude: "#D0B79A",
+  black: "#000000",
+};
 
+// helper debounce
+function useDebounced(value, delay = 450) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+export default function SearchPage() {
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
-    setPage(1); // reset page when filters change
+  // UI state
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounced(query, 400);
+
+  const [cuisine, setCuisine] = useState("");
+  const [dietType, setDietType] = useState("");
+  const [maxTime, setMaxTime] = useState(""); // number or "", use buckets like 15, 30, 60
+  const [sort, setSort] = useState("newest");
+
+  const [page, setPage] = useState(1);
+  const [limit] = useState(12);
+
+  // results
+  const [recipes, setRecipes] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  // quick chips data (could be fetched from backend if dynamic)
+  const cuisines = useMemo(
+    () => ["All", "Indian", "Italian", "Chinese", "Mexican", "American", "Fusion"],
+    []
+  );
+  const diets = useMemo(() => ["All", "Vegetarian", "Vegan", "Keto", "Gluten-Free"], []);
+  const timeBuckets = useMemo(() => [
+    { label: "≤ 15m", val: 15 },
+    { label: "≤ 30m", val: 30 },
+    { label: "≤ 60m", val: 60 },
+    { label: "Any", val: "" },
+  ], []);
+
+  // helper to build query string
+  const buildQueryParams = () => {
+    const params = new URLSearchParams();
+    if (debouncedQuery?.trim()) params.set("search", debouncedQuery.trim());
+    if (cuisine && cuisine !== "All") params.set("cuisine", cuisine);
+    if (dietType && dietType !== "All") params.set("dietType", dietType);
+    if (maxTime) params.set("maxTime", String(maxTime));
+    if (sort) params.set("sort", sort);
+    if (page) params.set("page", String(page));
+    if (limit) params.set("limit", String(limit));
+    return params.toString();
   };
 
-  // 🥗 Fetch diets dynamically from backend
+  // Fetch results whenever filters change
   useEffect(() => {
-    const fetchDiets = async () => {
+    const fetchResults = async () => {
+      setLoading(true);
       try {
-        const res = await fetch(`${API_URL}/api/recipes/diets`);
+        const qs = buildQueryParams();
+        const url = `${API_URL}/api/recipes${qs ? `?${qs}` : ""}`;
+        const res = await fetch(url);
         const data = await res.json();
-        setDiets(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("❌ Error fetching diets:", error);
+
+        // backend sometimes returns { recipes, total, page, totalPages } or an array
+        if (res.ok) {
+          if (Array.isArray(data)) {
+            setRecipes(data);
+            setTotal(data.length);
+          } else {
+            setRecipes(data.recipes || []);
+            setTotal(data.total || (data.recipes ? data.recipes.length : 0));
+          }
+        } else {
+          toast.error(data.message || "Failed to search recipes");
+          setRecipes([]);
+          setTotal(0);
+        }
+      } catch (err) {
+        console.error("Search error:", err);
+        toast.error("Network error while searching");
+        setRecipes([]);
+        setTotal(0);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchDiets();
-  }, []);
 
-  // 🔍 Fetch recipes from backend
-  const fetchRecipes = async () => {
-    setLoading(true);
-    try {
-      const query = new URLSearchParams({
-        ...filters,
-        page,
-        limit: 10,
-      }).toString();
-
-      const res = await fetch(`${API_URL}/api/recipes?${query}`);
-      const data = await res.json();
-
-      setRecipes(data.recipes || []);
-      setTotalPages(data.totalPages || 1);
-    } catch (error) {
-      console.error("❌ Error fetching recipes:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ⏳ Debounce search/filter requests (auto-fetch)
-  useEffect(() => {
-    const delay = setTimeout(() => {
-      fetchRecipes();
-    }, 500); // 0.5s debounce
-    return () => clearTimeout(delay);
-  }, [filters, page]);
-
-  // 🔄 Handle manual search submit
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchRecipes();
-  };
-
-  // 🔁 Reset filters + refetch
-  const handleReset = () => {
-    setFilters({
-      search: "",
-      cuisine: "",
-      dietType: "",
-      maxTime: "",
-      ingredients: "",
-      sort: "newest",
-    });
+    // whenever search filters change, reset to page 1 (unless explicit)
     setPage(1);
-    fetchRecipes();
+    fetchResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, cuisine, dietType, maxTime, sort]);
+
+  // fetch for page changes (keeps other filters)
+  useEffect(() => {
+    const fetchPage = async () => {
+      setLoading(true);
+      try {
+        const qs = buildQueryParams();
+        const url = `${API_URL}/api/recipes${qs ? `?${qs}` : ""}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (res.ok) {
+          if (Array.isArray(data)) {
+            setRecipes(data);
+            setTotal(data.length);
+          } else {
+            setRecipes(data.recipes || []);
+            setTotal(data.total || (data.recipes ? data.recipes.length : 0));
+          }
+        } else {
+          toast.error(data.message || "Failed to fetch page");
+        }
+      } catch (err) {
+        console.error("Pagination fetch error:", err);
+        toast.error("Failed to fetch recipes");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // only run on page changes (skip initial because it's handled above)
+    if (page > 1) fetchPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  // derived
+  const totalPages = Math.max(1, Math.ceil((total || 0) / limit));
+
+  // handlers
+  const toggleCuisine = (c) => setCuisine(c === "All" ? "" : c);
+  const toggleDiet = (d) => setDietType(d === "All" ? "" : d);
+  const chooseTime = (t) => setMaxTime(t === "" ? "" : t);
+
+  const clearFilters = () => {
+    setQuery("");
+    setCuisine("");
+    setDietType("");
+    setMaxTime("");
+    setSort("newest");
+    setPage(1);
+  };
+
+  const handleViewRecipe = (id) => navigate(`/recipe/${id}`);
+
+  // Small helper for card image path
+  const getImageUrl = (r) => {
+    if (r.images?.length) return `${API_URL}/${r.images[0]}`;
+    return "/no-image.png";
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 md:px-10 py-10">
-      <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">
-        🔍 Advanced Recipe Search
-      </h2>
-
-      {/* 🧭 Filter Form */}
-      <form
-        onSubmit={handleSearch}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-6 rounded-lg shadow-md mb-8"
+    <div className="kanit-light min-h-screen" style={{ background: PALETTE.cream }}>
+      {/* Hero header: uses uploaded palette image */}
+      <div
+        className="relative h-44 md:h-56 rounded-b-2xl overflow-hidden"
+        style={{
+          backgroundImage: `url("/mnt/data/3280de49-5dfd-4004-aee1-cfcc39a75843.png")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "brightness(0.95)",
+        }}
       >
-        {/* 🔍 Keyword Search */}
-        <input
-          type="text"
-          name="search"
-          placeholder="Search keyword..."
-          value={filters.search}
-          onChange={handleChange}
-          className="input input-bordered w-full"
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(90deg, rgba(243,215,158,0.9), rgba(247,238,219,0.4))",
+          }}
         />
-
-        {/* 🌍 Cuisine */}
-        <input
-          type="text"
-          name="cuisine"
-          placeholder="Cuisine (e.g., Italian, Indian)"
-          value={filters.cuisine}
-          onChange={handleChange}
-          className="input input-bordered w-full"
-        />
-
-        {/* 🥗 Dynamic Diet Dropdown */}
-        <select
-          name="dietType"
-          value={filters.dietType}
-          onChange={handleChange}
-          className="select select-bordered w-full"
-        >
-          <option value="">All Diets</option>
-          <option value="Vegetarian">Vegetarian</option>
-          <option value="Vegan">Vegan</option>
-          <option value="Non-Vegetarian">Non-Vegetarian</option>
-          <option value="Keto">Keto</option>
-          <option value="Gluten-Free">Gluten-Free</option>
-        </select>
-
-
-
-        {/* ⏱️ Max Time */}
-        <input
-          type="number"
-          name="maxTime"
-          placeholder="Max Time (mins)"
-          value={filters.maxTime}
-          onChange={handleChange}
-          className="input input-bordered w-full"
-        />
-
-        {/* 🧂 Ingredients Filter */}
-        <input
-          type="text"
-          name="ingredients"
-          placeholder="Ingredients (comma-separated)"
-          value={filters.ingredients}
-          onChange={handleChange}
-          className="input input-bordered w-full md:col-span-2"
-        />
-
-        {/* ⚙️ Sort Dropdown */}
-        <select
-          name="sort"
-          value={filters.sort}
-          onChange={handleChange}
-          className="select select-bordered w-full"
-        >
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="likes">Most Liked</option>
-          <option value="time">Shortest Time</option>
-        </select>
-
-        {/* 🧭 Buttons */}
-        <div className="flex flex-col sm:flex-row gap-2 md:col-span-2 lg:col-span-4">
-          <button
-            type="submit"
-            className="btn btn-primary flex-1"
-            disabled={loading}
-          >
-            {loading ? "Searching..." : "Apply Filters"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline flex-1"
-            onClick={handleReset}
-            disabled={loading}
-          >
-            Reset
-          </button>
+        <div className="absolute inset-0 flex flex-col justify-center items-center text-center px-4">
+          <h1 className="text-3xl md:text-4xl font-bold" style={{ color: PALETTE.brown }}>
+            Discover Recipes — Search, Filter, Enjoy
+          </h1>
+          <p className="mt-2 text-sm md:text-base text-gray-700">
+            Live search across titles, ingredients and steps. Try "pasta", "paneer", or "30 mins".
+          </p>
         </div>
-      </form>
+      </div>
 
-      {/* 📦 Results */}
-      {loading ? (
-        <p className="text-center text-gray-500">Loading recipes...</p>
-      ) : recipes.length === 0 ? (
-        <div className="text-center text-gray-500">
-          <p>No recipes found matching your filters.</p>
-          <button
-            className="btn btn-sm btn-outline mt-3"
-            onClick={fetchRecipes}
-          >
-            Try Again
-          </button>
+      {/* Floating search bar */}
+      <div className="mx-auto max-w-6xl px-4 -mt-8">
+        <div
+          className="glass p-4 rounded-xl shadow-md flex flex-col md:flex-row gap-3 items-center"
+          style={{
+            background: "rgba(255,255,255,0.85)",
+            border: `1px solid ${PALETTE.tan}`,
+          }}
+        >
+          <div className="flex-1 w-full">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search recipes, ingredients, cuisines..."
+              className="input input-bordered w-full"
+              style={{ borderColor: PALETTE.tan }}
+            />
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="select select-bordered"
+              style={{ borderColor: PALETTE.tan }}
+            >
+              <option value="newest">Newest</option>
+              <option value="likes">Most liked</option>
+              <option value="time">Shortest time</option>
+            </select>
+
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 rounded-xl"
+              style={{
+                border: `1px solid ${PALETTE.tan}`,
+                background: "transparent",
+                color: PALETTE.brown,
+              }}
+            >
+              Reset
+            </button>
+          </div>
         </div>
-      ) : (
-        <>
-          <div
-            className="grid gap-6 sm:gap-8"
-            style={{
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            }}
-          >
-            {recipes.map((recipe) => (
-              <motion.div
-                key={recipe._id}
-                whileHover={{ scale: 1.03 }}
-                transition={{ duration: 0.2 }}
-                className="border rounded-lg shadow-md bg-white hover:shadow-xl transition cursor-pointer overflow-hidden"
-                onClick={() => navigate(`/recipe/${recipe._id}`)}
-              >
-                <img
-                  src={
-                    recipe.image ||
-                    "https://images.unsplash.com/photo-1601050690597-6cc5b81c41f0?auto=format&fit=crop&w=400&q=80"
-                  }
-                  alt={recipe.title}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold text-gray-800 truncate">
-                    {recipe.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm mt-2 line-clamp-2">
-                    {recipe.description}
-                  </p>
-                  <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-                    <span>👨‍🍳 {recipe.user?.name || "Anonymous"}</span>
-                    <span>❤️ {recipe.likes || 0}</span>
+      </div>
+
+      {/* Filters chips */}
+      <div className="max-w-6xl mx-auto px-4 mt-4">
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Cuisine chips */}
+          <div className="flex gap-2 items-center flex-wrap">
+            <span className="text-sm text-gray-600 mr-2">Cuisine:</span>
+            {cuisines.map((c) => {
+              const active = (c === "All" ? cuisine === "" : cuisine === c);
+              return (
+                <button
+                  key={c}
+                  onClick={() => toggleCuisine(c)}
+                  className={`px-3 py-1 rounded-full text-sm transition-shadow`}
+                  style={{
+                    background: active ? PALETTE.brown : "white",
+                    color: active ? "white" : PALETTE.brown,
+                    border: `1px solid ${PALETTE.tan}`,
+                    boxShadow: active ? "0 4px 12px rgba(181,118,85,0.15)" : "none",
+                  }}
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Diet chips */}
+          <div className="flex gap-2 items-center ml-3 flex-wrap">
+            <span className="text-sm text-gray-600 mr-2">Diet:</span>
+            {diets.map((d) => {
+              const active = (d === "All" ? dietType === "" : dietType === d);
+              return (
+                <button
+                  key={d}
+                  onClick={() => toggleDiet(d)}
+                  className="px-3 py-1 rounded-full text-sm transition-shadow"
+                  style={{
+                    background: active ? PALETTE.brown : "white",
+                    color: active ? "white" : PALETTE.brown,
+                    border: `1px solid ${PALETTE.tan}`,
+                    boxShadow: active ? "0 4px 12px rgba(181,118,85,0.15)" : "none",
+                  }}
+                >
+                  {d}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Time chips */}
+          <div className="flex gap-2 items-center ml-auto">
+            <span className="text-sm text-gray-600 mr-2">Time:</span>
+            {timeBuckets.map((t) => {
+              const active = (String(t.val) === String(maxTime));
+              return (
+                <button
+                  key={t.label}
+                  onClick={() => chooseTime(t.val)}
+                  className="px-3 py-1 rounded-full text-sm"
+                  style={{
+                    background: active ? PALETTE.brown : "white",
+                    color: active ? "white" : PALETTE.brown,
+                    border: `1px solid ${PALETTE.tan}`,
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Results grid */}
+      <div className="max-w-6xl mx-auto px-4 mt-6 pb-10">
+        {loading ? (
+          <div className="text-center py-20 text-lg font-semibold" style={{ color: PALETTE.brown }}>
+            Searching...
+          </div>
+        ) : recipes.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-xl font-semibold mb-3" style={{ color: PALETTE.brown }}>
+              No recipes found
+            </div>
+            <p className="text-gray-600 mb-5">Try searching for something else or clear filters.</p>
+            <button
+              onClick={clearFilters}
+              className="px-5 py-2 rounded-xl"
+              style={{
+                background: PALETTE.brown,
+                color: "white",
+                border: `1px solid ${PALETTE.tan}`,
+              }}
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <>
+            <div
+              className="grid gap-6 sm:gap-8"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}
+            >
+              {recipes.map((recipe) => (
+                <div
+                  key={recipe._id}
+                  className="rounded-2xl shadow-md overflow-hidden transition-transform hover:scale-[1.02] cursor-pointer"
+                  style={{ background: "white", border: `1px solid ${PALETTE.tan}` }}
+                  onClick={() => handleViewRecipe(recipe._id)}
+                >
+                  <img
+                    src={getImageUrl(recipe)}
+                    alt={recipe.title}
+                    className="w-full h-44 object-cover"
+                  />
+                  <div className="p-4">
+                    <h3 className="text-xl font-semibold mb-1" style={{ color: PALETTE.brown }}>
+                      {recipe.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                      {recipe.ingredients ? (typeof recipe.ingredients === "string" ? recipe.ingredients.slice(0, 80) + (recipe.ingredients.length > 80 ? "..." : "") : "") : ""}
+                    </p>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm text-gray-700">⏱ {recipe.cookingTime || "-" } mins</p>
+                        <p className="text-sm text-gray-700">❤️ {recipe.likes || 0}</p>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/recipe/${recipe._id}`);
+                        }}
+                        className="px-3 py-2 rounded-lg"
+                        style={{
+                          background: PALETTE.brown,
+                          color: "white",
+                        }}
+                      >
+                        View
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* 📄 Pagination */}
-          <div className="flex justify-center mt-8 gap-4">
-            <button
-              className="btn btn-outline"
-              disabled={page === 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              ⬅️ Previous
-            </button>
-            <span className="text-gray-600 font-medium mt-2">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              className="btn btn-outline"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next ➡️
-            </button>
-          </div>
-        </>
-      )}
+            {/* Pagination */}
+            <div className="mt-8 flex justify-center items-center gap-3">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-3 py-2 rounded-md"
+                style={{
+                  border: `1px solid ${PALETTE.tan}`,
+                  background: page > 1 ? "white" : "#f3f0ea",
+                  color: PALETTE.brown,
+                }}
+              >
+                Prev
+              </button>
+
+              <div className="px-4 py-2 rounded-md" style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}>
+                Page {page} / {totalPages}
+              </div>
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-3 py-2 rounded-md"
+                style={{
+                  border: `1px solid ${PALETTE.tan}`,
+                  background: page < totalPages ? "white" : "#f3f0ea",
+                  color: PALETTE.brown,
+                }}
+              >
+                Next
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
-};
-
-export default SearchPage;
+}

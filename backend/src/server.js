@@ -1,5 +1,4 @@
 import express from "express";
-import mongoose from "mongoose";
 import recipeRoutes from "./routes/recipeRoutes.js";
 import { connectDB } from "./config/db.js";
 import dotenv from "dotenv";
@@ -7,6 +6,7 @@ import rateLimiter from "./middleware/rateLimiter.js";
 import userRoutes from "./routes/userRoutes.js";
 import cors from "cors";
 import path from "path";
+import contactRoutes from "../src/routes/contactRoutes.js"
 
 dotenv.config()
 
@@ -46,6 +46,8 @@ app.use(rateLimiter)
 
 app.use("/api/recipes",recipeRoutes)
 app.use("/api/users", userRoutes);
+app.use("/api/contact", contactRoutes);
+
 
 
 connectDB().then(() => {

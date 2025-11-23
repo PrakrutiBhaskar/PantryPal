@@ -17,6 +17,11 @@ import EditRecipe from "./pages/EditPage.jsx";
 import Favorites from "./pages/Favorites.jsx";
 import LikedPage from "./pages/LikedPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
+import ContactPage from "./pages/ContactPage.jsx";
+import AboutUs from "./pages/AboutUS.jsx";
+import AllRecipes from "./pages/Allrecipes.jsx";
 
 const App = () => {
   return (
@@ -25,9 +30,12 @@ const App = () => {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+        <Route path="/recipes" element={<AllRecipes />} />
         <Route path="/create" element={<ProtectedRoute><CreatePage /></ProtectedRoute>} />
         <Route path="/recipe/:id" element={<ProtectedRoute><RecipeDetailPage /></ProtectedRoute>} />
         <Route path="/myrecipes" element={<ProtectedRoute><MyRecipes /></ProtectedRoute>} />
@@ -35,6 +43,8 @@ const App = () => {
         <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>}/>
         <Route path="/liked" element={<ProtectedRoute><LikedPage /></ProtectedRoute>}/>
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>}/>
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/about" element={<AboutUs />} />
       </Routes>
       <Footer />
     </div>

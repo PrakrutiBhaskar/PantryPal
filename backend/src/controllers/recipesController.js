@@ -293,3 +293,12 @@ export const getLikedRecipes = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const getAllRecipes = async (req, res) => {
+  try {
+    const recipes = await Recipe.find().sort({ createdAt: -1 });
+    res.json(recipes);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to load recipes" });
+  }
+};

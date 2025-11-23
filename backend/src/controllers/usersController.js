@@ -1,7 +1,75 @@
 // usersController.js
-import User from "../models/User.js";
 import Recipe from "../models/Recipe.js";
 import { generateToken } from "../utils/generateToken.js";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
+import { sendEmail } from "../utils/sendEmail.js";
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Generate reset token
+    const resetToken = jwt.sign({ id: user._id },process.env.JWT_SECRET,{ expiresIn: "15m" });
+
+    const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
+
+    // HTML Template
+    const htmlMessage = `
+      <div style="padding: 20px; font-family: Arial;">
+        <h2>Password Reset Request</h2>
+        <p>Hello <strong>${user.name}</strong>,</p>
+        <p>You have requested to reset your password.</p>
+        <p>Click the link below to reset:</p>
+
+        <a href="${resetURL}" 
+           style="display:inline-block; padding:10px 20px; background:#B57655; color:white; text-decoration:none; border-radius:5px;">
+           Reset Your Password
+        </a>
+
+        <p style="margin-top:20px;">If you didn't request this, ignore this email.</p>
+        <p>– PantryPal Team</p>
+      </div>
+    `;
+
+    await sendEmail({
+      to: user.email,
+      subject: "Reset Your Password - PantryPal",
+      html: htmlMessage,
+    });
+
+    res.json({ message: "Reset link sent to your email" });
+
+  } catch (error) {
+    console.error("❌ Forgot password error:", error);
+    res.status(500).json({ message: "Email could not be sent" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).json({ message: "Invalid token" });
+
+    user.password = password;  // hashed via pre-save hook
+    await user.save();
+
+    res.json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Reset error:", error);
+    res.status(500).json({ message: "Reset failed" });
+  }
+};
+
+
 
 // Register a new user
 export const registerUser = async (req, res) => {
@@ -12,7 +80,12 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const user = await User.create({ name, email, password });
+    const user = await User.create({
+  name: name.trim(),
+  email,
+  password
+});
+
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -188,5 +261,58 @@ export const updateProfile = async (req, res) => {
   } catch (err) {
     console.error("Error updating profile:", err);
     res.status(500).json({ message: "Server error updating profile" });
+  }
+};
+
+
+export const sendContactMessage = async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Email that YOU receive
+    const adminEmailTemplate = `
+      <div style="font-family: Arial; padding: 20px;">
+        <h2>📩 New Contact Form Message</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+      </div>
+    `;
+
+    // Automatically respond to the user as well (optional)
+    const userConfirmationTemplate = `
+      <div style="font-family: Arial; padding: 20px;">
+        <h2>Thank You for Contacting PantryPal! 🙌</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>We received your message and will get back to you soon.</p>
+        <p>Here is a copy of your message:</p>
+        <blockquote>${message}</blockquote>
+        <p>— PantryPal Support Team</p>
+      </div>
+    `;
+
+    // Send email to YOU
+    await sendEmail({
+      to: process.env.CONTACT_RECEIVER, // your email address
+      subject: "New Contact Form Submission",
+      html: adminEmailTemplate,
+    });
+
+    // Send confirmation email to USER
+    await sendEmail({
+      to: email,
+      subject: "We Received Your Message — PantryPal",
+      html: userConfirmationTemplate,
+    });
+
+    res.status(200).json({ message: "Message sent successfully" });
+  } catch (err) {
+    console.error("❌ Contact form error:", err);
+    res.status(500).json({ message: "Failed to send message" });
   }
 };
