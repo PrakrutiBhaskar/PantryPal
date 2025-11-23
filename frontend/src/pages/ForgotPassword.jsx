@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import backgroundImage from "../assets/background.jpg"
+import backgroundImage from "../assets/background.jpg";
+
+const API_URL = import.meta.env.VITE_API_URL; // ✅ Production backend URL
 
 const PALETTE = {
   cream: "#F2E3C6",
@@ -14,10 +16,10 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
+
     try {
-      const res = await fetch("http://localhost:5001/api/users/forgot-password", {
+      const res = await fetch(`${API_URL}/api/users/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -33,16 +35,21 @@ const ForgotPassword = () => {
       }
     } catch (err) {
       toast.error("Server error. Try again later.");
+      console.error("❌ Forgot password error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="kanit-light min-h-screen flex items-center justify-center bg-[var(--cream)]" style={{ backgroundImage: `url('${backgroundImage}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-     }}>
+    <div
+      className="kanit-light min-h-screen flex items-center justify-center"
+      style={{
+        backgroundImage: `url('${backgroundImage}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       <div
         className="w-full max-w-md p-8 rounded-xl shadow-xl backdrop-blur-md"
         style={{

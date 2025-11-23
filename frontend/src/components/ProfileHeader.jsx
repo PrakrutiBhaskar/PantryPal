@@ -9,57 +9,58 @@ const colors = {
   caramel: "#BA8C73",
 };
 
-export default function ProfileHeader({ user }) {
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+
+export default function ProfileHeader({ user, onEdit }) {
+  const profileImg = user?.profileImage
+    ? `${API_URL}/${user.profileImage}`
+    : "/default-avatar.png";
+
   return (
     <div
-      className="w-full py-10 px-6 rounded-xl shadow-md"
+      className="w-full py-10 px-6 rounded-xl shadow-md kanit-light"
       style={{
         background: `linear-gradient(135deg, ${colors.cream}, ${colors.tan})`,
       }}
     >
       <div className="max-w-3xl mx-auto flex flex-col md:flex-row items-center md:items-start gap-8">
-        
-        {/* Profile Picture */}
-        <div className="relative">
+
+        {/* Profile Image */}
+        <div className="relative flex-shrink-0">
           <img
-            src={
-              user?.profileImage
-                ? `${import.meta.env.VITE_API_URL}/${user.profileImage}`
-                : "/default-avatar.png"
-            }
+            src={profileImg}
             alt="Profile"
-            className="w-36 h-36 rounded-full object-cover shadow-md border-4"
+            onError={(e) => (e.target.src = "/default-avatar.png")}
+            className="w-36 h-36 md:w-40 md:h-40 rounded-full object-cover shadow-lg border-4"
             style={{ borderColor: colors.brown }}
           />
 
-          {/* Outline Glow */}
+          {/* Soft Glow */}
           <div
-            className="absolute inset-0 rounded-full"
+            className="absolute inset-0 rounded-full pointer-events-none"
             style={{
-              boxShadow: `0 0 20px ${colors.brown}55`,
+              boxShadow: `0 0 25px ${colors.brown}55`,
             }}
           ></div>
         </div>
 
         {/* User Info */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 text-center md:text-left">
           <h1
-            className="text-4xl font-bold"
+            className="text-4xl font-bold break-words"
             style={{ color: colors.brown }}
           >
-            {user?.name}
+            {user?.name || "User"}
           </h1>
 
-          <p
-            className="text-lg"
-            style={{ color: colors.caramel }}
-          >
+          <p className="text-lg" style={{ color: colors.caramel }}>
             {user?.email}
           </p>
 
           {/* Edit Button */}
           <button
-            className="px-4 py-2 rounded-lg font-medium mt-2"
+            onClick={onEdit}
+            className="px-5 py-2 rounded-lg font-medium mt-3 transition shadow"
             style={{
               backgroundColor: colors.beige,
               color: colors.brown,

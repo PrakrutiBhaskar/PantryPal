@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+// ✅ Always use Render backend URL
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Bakery Palette
 const PALETTE = {
@@ -28,8 +29,11 @@ const Favorites = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // ❌ Token invalid → logout user
       if (res.status === 401) {
-        navigate("/signup");
+        toast.error("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
         return;
       }
 
@@ -39,11 +43,12 @@ const Favorites = () => {
     } catch (err) {
       toast.error("Failed to load favorites");
       console.error("❌ Error fetching favorites:", err);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!token) return navigate("/signup");
+    if (!token) return navigate("/login");
     fetchFavorites();
   }, []);
 
@@ -60,7 +65,7 @@ const Favorites = () => {
         toast.success("Removed from favorites");
         setRecipes((prev) => prev.filter((r) => r._id !== id));
       } else {
-        toast.error(data.message);
+        toast.error(data.message || "Failed to update favorite");
       }
     } catch (error) {
       toast.error("Error removing favorite");
@@ -117,16 +122,13 @@ const Favorites = () => {
             <div
               key={recipe._id}
               className="rounded-2xl shadow-md overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
-              style={{
-                background: "white",
-                border: `1px solid ${PALETTE.tan}`,
-              }}
+              style={{ background: "white", border: `1px solid ${PALETTE.tan}` }}
             >
               {/* Image */}
               <img
                 src={
                   recipe.images?.length
-                    ? `${API_URL}/${recipe.images[0]}`
+                    ? `${API_URL}/${recipe.images[0].replace(/\\/g, "/")}`
                     : "/no-image.png"
                 }
                 alt={recipe.title}
@@ -150,14 +152,11 @@ const Favorites = () => {
 
                 {/* Buttons */}
                 <div className="flex justify-between items-center mt-4">
-                  
                   {/* Remove Button */}
                   <button
                     onClick={() => handleUnfavorite(recipe._id)}
                     className="px-3 py-2 text-white rounded-xl"
-                    style={{
-                      background: "#C62828",
-                    }}
+                    style={{ background: "#C62828" }}
                   >
                     ❌ Remove
                   </button>
@@ -166,14 +165,11 @@ const Favorites = () => {
                   <button
                     onClick={() => navigate(`/recipe/${recipe._id}`)}
                     className="px-3 py-2 rounded-xl text-white"
-                    style={{
-                      background: PALETTE.brown,
-                    }}
+                    style={{ background: PALETTE.brown }}
                   >
                     View
                   </button>
                 </div>
-
               </div>
             </div>
           ))}

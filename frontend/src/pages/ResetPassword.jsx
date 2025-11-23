@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import backgroundImage from "../assets/background.jpg"
+import backgroundImage from "../assets/background.jpg";
+
+const API_URL = import.meta.env.VITE_API_URL; // ✅ Render-safe
 
 const PALETTE = {
   cream: "#F2E3C6",
@@ -21,6 +23,11 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     if (password !== confirm) {
       toast.error("Passwords do not match ❌");
       return;
@@ -30,7 +37,7 @@ const ResetPassword = () => {
 
     try {
       const res = await fetch(
-        `http://localhost:5001/api/users/reset-password/${token}`,
+        `${API_URL}/api/users/reset-password/${token}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -44,7 +51,7 @@ const ResetPassword = () => {
         toast.success("Password reset successful! 🎉");
         navigate("/login");
       } else {
-        toast.error(data.message);
+        toast.error(data.message || "Invalid or expired link");
       }
     } catch (err) {
       toast.error("Server error. Try again later.");
@@ -54,10 +61,14 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="kanit-light min-h-screen flex items-center justify-center bg-[var(--cream)]" style={{ backgroundImage: `url('${backgroundImage}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-     }}>
+    <div
+      className="kanit-light min-h-screen flex items-center justify-center"
+      style={{
+        backgroundImage: `url('${backgroundImage}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       <div
         className="p-10 w-full max-w-lg rounded-3xl shadow-2xl relative"
         style={{
@@ -84,10 +95,7 @@ const ResetPassword = () => {
           Reset Your Password 🔐
         </h1>
 
-        <p
-          className="text-center mb-6"
-          style={{ color: "#6b6b6b" }}
-        >
+        <p className="text-center mb-6 text-gray-700">
           Create a new password to regain access to your account.
         </p>
 
@@ -111,12 +119,10 @@ const ResetPassword = () => {
 
           {/* Confirm Password */}
           <div>
-            <label className="font-semibold mb-1 block">
-              Confirm Password
-            </label>
+            <label className="font-semibold mb-1 block">Confirm Password</label>
             <input
               type="password"
-              placeholder="Confirm new password"
+              placeholder="Confirm password"
               className="input input-bordered w-full"
               style={{
                 borderColor: PALETTE.tan,
@@ -128,7 +134,6 @@ const ResetPassword = () => {
             />
           </div>
 
-          {/* Submit */}
           <button
             className="btn w-full text-white mt-4"
             style={{
@@ -145,8 +150,8 @@ const ResetPassword = () => {
         <p className="text-center mt-6">
           <a
             href="/login"
-            style={{ color: PALETTE.brown }}
             className="underline"
+            style={{ color: PALETTE.brown }}
           >
             Back to Login
           </a>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_URL = import.meta.env.VITE_API_URL; // ✅ Render-safe base URL
 
 // Bakery Palette
 const PALETTE = {
@@ -30,17 +30,16 @@ const MyRecipes = () => {
       });
 
       const data = await res.json();
-      console.log("📥 RESPONSE RAW:", data);
 
       if (!res.ok) {
         toast.error(data.message || "Failed to load your recipes");
         return;
       }
 
-      if (Array.isArray(data.recipes)) setRecipes(data.recipes);
-      else setRecipes([]);
+      setRecipes(Array.isArray(data.recipes) ? data.recipes : []);
     } catch (error) {
       console.error("❌ Error loading my recipes:", error);
+      toast.error("Error loading your recipes");
     } finally {
       setLoading(false);
     }
@@ -57,7 +56,8 @@ const MyRecipes = () => {
 
   // Delete Recipe
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this recipe?")) return;
+    const yes = window.confirm("Are you sure you want to delete this recipe?");
+    if (!yes) return;
 
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}`, {

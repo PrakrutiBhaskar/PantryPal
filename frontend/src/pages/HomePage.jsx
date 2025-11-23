@@ -10,24 +10,10 @@ import {
   FaSearch,
 } from "react-icons/fa";
 
-/**
- * HomePage.jsx
- * Final complete homepage with:
- * - Centered glass search bar inside hero
- * - Parallax hero
- * - Trending carousel
- * - Reveal animations
- * - Shimmer skeletons
- * - Light / Dark bakery theme toggle
- *
- * Requirements:
- * - Add kanit font and .kanit-light class in your global CSS (index.html or index.css)
- * - Put hero-food.jpg and no-image.png into /public (or change paths)
- * - Ensure backend API_URL is defined in env or default will be http://localhost:5001
- */
+// ✅ Always use Render backend URL
+const API_URL = import.meta.env.VITE_API_URL;
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
-
+// Bakery Palette
 const PALETTE = {
   beige: "#F3D79E",
   brown: "#B57655",
@@ -43,7 +29,9 @@ export default function HomePage() {
   const [trending, setTrending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("theme") || "light"
+  );
   const [parallaxY, setParallaxY] = useState(0);
 
   const navigate = useNavigate();
@@ -56,27 +44,34 @@ export default function HomePage() {
     const onScroll = () => setParallaxY(window.scrollY * 0.12);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 🎯 FETCH RECIPES
   async function fetchRecipes() {
     try {
       setLoading(true);
+
       const res = await fetch(`${API_URL}/api/recipes`);
       const data = await res.json();
+
       const list = data.recipes || data || [];
+
       setRecipes(list);
-      setTrending(
-        [...list].sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 8)
-      );
+
+      const sortedTrending = [...list]
+        .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+        .slice(0, 8);
+
+      setTrending(sortedTrending);
     } catch (err) {
       console.error("Failed to load recipes", err);
-      toast.error("Failed to load recipes");
+      toast.error("Failed to load recipes.");
     } finally {
       setLoading(false);
     }
   }
 
+  // 🎨 APPLY THEME
   function applyTheme(t) {
     const root = document.documentElement;
     if (t === "dark") {
@@ -101,6 +96,7 @@ export default function HomePage() {
   function scrollCarousel(dir = 1) {
     const el = carouselRef.current;
     if (!el) return;
+
     const card = el.querySelector(".tr-card");
     const scrollAmount = (card?.offsetWidth || 300) + 16;
     el.scrollBy({ left: dir * scrollAmount, behavior: "smooth" });
@@ -113,13 +109,10 @@ export default function HomePage() {
     navigate(`/search?q=${encodeURIComponent(q)}`);
   }
 
-  // Skeleton (shimmer)
+  // ⭐ SKELETON SHIMMER
   const Skeleton = ({ h = 44 }) => (
     <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)" }}>
-      <div
-        className="skeleton-image"
-        style={{ width: "100%", height: `${h}px` }}
-      />
+      <div className="skeleton-image" style={{ width: "100%", height: `${h}px` }} />
       <div className="p-4 space-y-3">
         <div className="skeleton-line w-3/4 h-5" />
         <div className="skeleton-line w-full h-4" />
@@ -130,7 +123,7 @@ export default function HomePage() {
 
   return (
     <div className="kanit-light" style={{ background: "var(--bg)" }}>
-      {/* Inline small CSS (shimmer, glass) */}
+      {/* ⭐ INLINE CSS FOR PARALLAX / SKELETONS */}
       <style>{`
         .glass {
           background: rgba(255,255,255,0.55);
@@ -146,25 +139,21 @@ export default function HomePage() {
           border-radius: 6px;
         }
         @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
+          0% { background-position: 200% 0; };
+          100% { background-position: -200% 0; };
         }
-
-        /* ensure hero children are visible and not clipped */
         .hero-wrap { overflow: visible; }
-
-        /* small niceties */
         .tr-scroll { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
       `}</style>
 
-      {/* HERO */}
+      {/* ⭐ HERO SECTION */}
       <section
         className="hero-wrap relative flex flex-col items-center text-center px-6 md:px-12 py-20 md:py-28"
         style={{ minHeight: "56vh" }}
       >
-        {/* Parallax background image (replace /hero-food.jpg as needed) */}
+        {/* PARALLAX BG */}
         <div
-          className="absolute inset-0 parallax-bg"
+          className="absolute inset-0"
           style={{
             backgroundImage: `url('/hero-food.jpg')`,
             backgroundSize: "cover",
@@ -175,7 +164,7 @@ export default function HomePage() {
           }}
         />
 
-        {/* overlay */}
+        {/* OVERLAY */}
         <div
           className="absolute inset-0"
           style={{
@@ -211,14 +200,14 @@ export default function HomePage() {
             <button
               onClick={() => navigate("/search")}
               className="px-6 py-3 rounded-xl border"
-              style={{ borderColor: PALETTE.tan, color: PALETTE.brown, background: "transparent" }}
+              style={{ borderColor: PALETTE.tan, color: PALETTE.brown }}
             >
               Browse All
             </button>
           </div>
         </motion.div>
 
-        {/* CENTERED GLASS SEARCH BAR (guaranteed visible) */}
+        {/* ⭐ GLASS SEARCH BAR */}
         <motion.form
           onSubmit={onSearch}
           initial={{ opacity: 0, y: 20 }}
@@ -231,6 +220,7 @@ export default function HomePage() {
             style={{ border: `1px solid ${PALETTE.tan}` }}
           >
             <FaSearch className="text-xl" style={{ color: PALETTE.brown }} />
+
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -263,21 +253,20 @@ export default function HomePage() {
         </motion.form>
       </section>
 
-      {/* small spacer so next content does not collide */}
       <div style={{ height: 90 }} />
 
-      {/* TRENDING CAROUSEL */}
+      {/* ⭐ TRENDING */}
       <section className="px-6 md:px-12 py-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="flex items-center text-2xl font-bold" style={{ color: PALETTE.brown }}>
+          <h2 className="text-2xl font-bold" style={{ color: PALETTE.brown }}>
             Trending Recipes
           </h2>
 
           <div className="flex gap-2">
-            <button onClick={() => scrollCarousel(-1)} className="p-2 rounded-full" aria-label="prev">
+            <button onClick={() => scrollCarousel(-1)} className="p-2 rounded-full">
               <FaChevronLeft />
             </button>
-            <button onClick={() => scrollCarousel(1)} className="p-2 rounded-full" aria-label="next">
+            <button onClick={() => scrollCarousel(1)} className="p-2 rounded-full">
               <FaChevronRight />
             </button>
           </div>
@@ -294,25 +283,36 @@ export default function HomePage() {
                   <Skeleton h={176} />
                 </div>
               ))
-            : trending.length === 0
-            ? <p>No trending recipes yet.</p>
             : trending.map((r) => (
                 <div
                   key={r._id}
                   className="min-w-[260px] max-w-[320px] tr-card rounded-2xl overflow-hidden"
-                  style={{ background: "var(--card)", border: `1px solid ${PALETTE.tan}` }}
+                  style={{
+                    background: "var(--card)",
+                    border: `1px solid ${PALETTE.tan}`,
+                  }}
                 >
                   <img
-                    src={r.images?.[0] ? `${API_URL}/${r.images[0]}` : "/no-image.png"}
+                    src={
+                      r.images?.[0]
+                        ? `${API_URL}/${r.images[0].replace(/\\/g, "/")}`
+                        : "/no-image.png"
+                    }
                     alt={r.title}
                     className="w-full h-44 object-cover"
                   />
+
                   <div className="p-4">
-                    <h3 className="text-xl font-semibold mb-2 truncate" style={{ color: PALETTE.brown }}>
+                    <h3
+                      className="text-xl font-semibold mb-2 truncate"
+                      style={{ color: PALETTE.brown }}
+                    >
                       {r.title}
                     </h3>
                     <div className="flex justify-between items-center">
-                      <span style={{ color: PALETTE.caramel }}>❤️ {r.likes || 0}</span>
+                      <span style={{ color: PALETTE.caramel }}>
+                        ❤️ {r.likes || 0}
+                      </span>
                       <button
                         onClick={() => navigate(`/recipe/${r._id}`)}
                         className="px-3 py-1 rounded-lg"
@@ -327,7 +327,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* MAIN GRID — EXPLORE RECIPES */}
+      {/* ⭐ EXPLORE RECIPES */}
       <section className="px-6 md:px-16 py-12">
         <h2 className="text-3xl font-bold text-center mb-8" style={{ color: PALETTE.brown }}>
           Explore Recipes
@@ -335,9 +335,7 @@ export default function HomePage() {
 
         <div
           className="grid gap-8"
-          style={{
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          }}
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}
         >
           {loading
             ? Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} />)
@@ -355,12 +353,13 @@ export default function HomePage() {
                   <img
                     src={
                       recipe.images?.[0]
-                        ? `${API_URL}/${recipe.images[0]}`
+                        ? `${API_URL}/${recipe.images[0].replace(/\\/g, "/")}`
                         : "/no-image.png"
                     }
                     alt={recipe.title}
                     className="w-full h-44 object-cover"
                   />
+
                   <div className="p-4">
                     <h3
                       className="text-xl font-semibold mb-2 truncate"
@@ -410,7 +409,6 @@ export default function HomePage() {
           </div>
         )}
       </section>
-
     </div>
   );
 }

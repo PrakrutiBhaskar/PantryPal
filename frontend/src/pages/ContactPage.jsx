@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import backgroundImage from "../assets/background.jpg"
+import backgroundImage from "../assets/background.jpg";
+
+const API_URL = import.meta.env.VITE_API_URL;   // ✅ Use Render backend URL
 
 const PALETTE = {
   cream: "#F2E3C6",
@@ -22,7 +24,7 @@ const ContactPage = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5001/api/contact", {
+      const res = await fetch(`${API_URL}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -44,10 +46,14 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="kanit-light min-h-screen flex items-center justify-center bg-[var(--cream)]" style={{ backgroundImage: `url('${backgroundImage}')`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-         }}>
+    <div
+      className="kanit-light min-h-screen flex items-center justify-center bg-[var(--cream)]"
+      style={{
+        backgroundImage: `url('${backgroundImage}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       <div
         className="w-full max-w-3xl p-10 rounded-3xl shadow-2xl relative"
         style={{
@@ -56,7 +62,6 @@ const ContactPage = () => {
           backdropFilter: "blur(12px)",
         }}
       >
-        {/* Decorative top-right glow */}
         <div
           className="absolute w-24 h-24 rounded-full opacity-40"
           style={{
@@ -75,11 +80,10 @@ const ContactPage = () => {
         </h1>
 
         <p className="text-center text-gray-700 mb-10 max-w-md mx-auto">
-          Have questions, feedback or need support?  
+          Have questions, feedback or need support?
           <br />We’d love to hear from you.
         </p>
 
-        {/* FORM */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block mb-1 font-semibold">Your Name</label>

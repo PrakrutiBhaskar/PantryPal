@@ -1,13 +1,21 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // If no token, redirect to signup page
-  if (!token) {
-    return <Navigate to="/signup" replace />;
-  }
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+    setAuthChecked(true);
+  }, []);
+
+  // Prevent flicker while checking auth
+  if (!authChecked) return null;
+
+  // Redirect if not logged in
+  if (!isLoggedIn) return <Navigate to="/signup" replace />;
 
   return children;
 };

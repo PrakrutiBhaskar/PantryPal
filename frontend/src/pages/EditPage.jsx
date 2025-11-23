@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+// ✅ Always use deployed backend URL from env
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Bakery UI Palette
 const PALETTE = {
@@ -29,9 +30,9 @@ const EditRecipe = () => {
     cookingTime: "",
   });
 
+  // Fetch recipe details
   useEffect(() => {
     fetchRecipe();
-    // eslint-disable-next-line
   }, [id]);
 
   const fetchRecipe = async () => {
@@ -42,28 +43,38 @@ const EditRecipe = () => {
       if (res.ok) {
         setFormData({
           title: data.title,
-          ingredients:
-            Array.isArray(data.ingredients) ? data.ingredients.join(", ") : data.ingredients,
-          steps: Array.isArray(data.steps) ? data.steps.join(". ") : data.steps,
-          cuisine: data.cuisine,
-          dietType: data.dietType,
-          cookingTime: data.cookingTime,
+          ingredients: Array.isArray(data.ingredients)
+            ? data.ingredients.join(", ")
+            : data.ingredients,
+          steps: Array.isArray(data.steps)
+            ? data.steps.join(". ")
+            : data.steps,
+          cuisine: data.cuisine || "",
+          dietType: data.dietType || "",
+          cookingTime: data.cookingTime || "",
         });
       } else {
         toast.error("Recipe not found");
         navigate("/myrecipes");
       }
     } catch (err) {
-      toast.error("Error loading recipe");
+      toast.error("Server error while loading recipe");
     }
   };
 
+  // Handle changes
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // Update recipe
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!token) {
+      toast.error("You must log in first!");
+      return navigate("/login");
+    }
 
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}`, {
@@ -78,13 +89,13 @@ const EditRecipe = () => {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("Recipe updated!");
+        toast.success("Recipe updated successfully!");
         navigate(`/recipe/${id}`);
       } else {
-        toast.error(data.message || "Update failed");
+        toast.error(data.message || "Failed to update recipe");
       }
     } catch (err) {
-      toast.error("Server error");
+      toast.error("Server error while updating");
     }
   };
 
@@ -121,6 +132,7 @@ const EditRecipe = () => {
           ← Back
         </button>
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           {/* Title */}
           <div>
@@ -133,10 +145,7 @@ const EditRecipe = () => {
               value={formData.title}
               onChange={handleChange}
               className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
               required
             />
           </div>
@@ -152,10 +161,7 @@ const EditRecipe = () => {
               onChange={handleChange}
               rows={3}
               className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
               required
             ></textarea>
           </div>
@@ -171,10 +177,7 @@ const EditRecipe = () => {
               onChange={handleChange}
               rows={5}
               className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
               required
             ></textarea>
           </div>
@@ -190,10 +193,7 @@ const EditRecipe = () => {
               value={formData.cuisine}
               onChange={handleChange}
               className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
             />
           </div>
 
@@ -207,10 +207,7 @@ const EditRecipe = () => {
               value={formData.dietType}
               onChange={handleChange}
               className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
             >
               <option value="">Select Diet</option>
               <option value="Vegetarian">Vegetarian</option>
@@ -232,10 +229,7 @@ const EditRecipe = () => {
               value={formData.cookingTime}
               onChange={handleChange}
               className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
             />
           </div>
 
@@ -243,10 +237,7 @@ const EditRecipe = () => {
           <button
             type="submit"
             className="py-3 text-lg rounded-xl shadow-md"
-            style={{
-              background: PALETTE.brown,
-              color: "white",
-            }}
+            style={{ background: PALETTE.brown, color: "white" }}
           >
             Update Recipe
           </button>

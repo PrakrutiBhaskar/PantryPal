@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_URL = import.meta.env.VITE_API_URL; // ✅ Render-safe
 
 // Bakery Palette
 const PALETTE = {
@@ -17,7 +17,11 @@ const PALETTE = {
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({
+    totalRecipes: 0,
+    totalLikes: 0,
+    totalFavorites: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   const [editModal, setEditModal] = useState(false);
@@ -39,13 +43,25 @@ const ProfilePage = () => {
       });
 
       const data = await res.json();
-      setProfile(data);
+
+      if (!res.ok) {
+        toast.error(data.message || "Failed to load profile");
+        return;
+      }
+
+      setProfile(data.user || data); // backend may return user or wrapped object
 
       const statsRes = await fetch(`${API_URL}/api/users/me/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const statsData = await statsRes.json();
-      setStats(statsData);
+
+      setStats({
+        totalRecipes: statsData.totalRecipes || 0,
+        totalLikes: statsData.totalLikes || 0,
+        totalFavorites: statsData.totalFavorites || 0,
+      });
 
       setLoading(false);
     } catch (error) {
@@ -55,13 +71,16 @@ const ProfilePage = () => {
   };
 
   useEffect(() => {
-    if (!token) return navigate("/signup");
+    if (!token) {
+      navigate("/signup");
+      return;
+    }
     fetchProfile();
   }, []);
 
   // Handle Edit Form
   const handleEditChange = (e) => {
-    const { name, value, files } = e.target;
+    const { name, files, value } = e.target;
 
     if (name === "profileImage") {
       setEditForm((prev) => ({ ...prev, profileImage: files[0] }));
@@ -73,31 +92,32 @@ const ProfilePage = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
 
-    const formData = new FormData();
-    formData.append("name", editForm.name);
-    formData.append("email", editForm.email);
-    formData.append("bio", editForm.bio);
+    const fd = new FormData();
+    fd.append("name", editForm.name);
+    fd.append("email", editForm.email);
+    fd.append("bio", editForm.bio);
 
     if (editForm.profileImage) {
-      formData.append("profileImage", editForm.profileImage);
+      fd.append("profileImage", editForm.profileImage);
     }
 
     try {
       const res = await fetch(`${API_URL}/api/users/profile`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+        body: fd,
       });
 
       const data = await res.json();
 
-      if (res.ok) {
-        toast.success("Profile updated!");
-        setEditModal(false);
-        fetchProfile();
-      } else {
-        toast.error(data.message);
+      if (!res.ok) {
+        toast.error(data.message || "Profile update failed");
+        return;
       }
+
+      toast.success("Profile updated!");
+      setEditModal(false);
+      fetchProfile();
     } catch (error) {
       toast.error("Update failed");
     }
@@ -182,10 +202,10 @@ const ProfilePage = () => {
         {/* Stats Section */}
         <div className="grid md:grid-cols-3 gap-5 mt-10">
           {[
-            { label: "Recipes Created", value: stats?.totalRecipes },
-            { label: "Total Likes", value: stats?.totalLikes },
-            { label: "Favorites Received", value: stats?.totalFavorites },
-          ].map((stat, i) => (
+            { label: "Recipes Created", value: stats.totalRecipes },
+            { label: "Total Likes", value: stats.totalLikes },
+            { label: "Favorites Received", value: stats.totalFavorites },
+          ].map((s, i) => (
             <div
               key={i}
               className="p-5 rounded-xl shadow text-center"
@@ -194,10 +214,13 @@ const ProfilePage = () => {
                 border: `1px solid ${PALETTE.tan}`,
               }}
             >
-              <h3 className="text-3xl font-bold" style={{ color: PALETTE.brown }}>
-                {stat.value}
+              <h3
+                className="text-3xl font-bold"
+                style={{ color: PALETTE.brown }}
+              >
+                {s.value}
               </h3>
-              <p className="text-gray-700">{stat.label}</p>
+              <p className="text-gray-700">{s.label}</p>
             </div>
           ))}
         </div>

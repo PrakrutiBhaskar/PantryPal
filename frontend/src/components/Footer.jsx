@@ -13,27 +13,40 @@ const PALETTE = {
 const Footer = () => {
   return (
     <footer
-      className="mt-20 py-10 px-6 backdrop-blur-md bg-white/60 border-t"
+      className="mt-20 py-12 px-6 backdrop-blur-md bg-white/60 border-t"
       style={{ borderColor: PALETTE.tan }}
     >
-      <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-10 text-center md:text-left">
-        
+      <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-10">
+
         {/* Brand */}
-        <div>
+        <div className="text-center md:text-left">
           <h2
-            className="text-2xl font-bold mb-2"
+            className="text-3xl font-bold mb-2"
             style={{ color: PALETTE.brown }}
           >
             PantryPal
           </h2>
-          <p className="text-gray-700 text-sm">
+          <p className="text-gray-700 text-sm leading-relaxed">
             Delicious recipes. Warm design.  
             Cook with love every day. ❤️
           </p>
+
+          {/* Social Icons */}
+          <div className="flex justify-center md:justify-start gap-4 mt-4 text-xl">
+            <a href="#" className="hover:scale-110 transition-transform" style={{ color: PALETTE.brown }}>
+              <FaInstagram />
+            </a>
+            <a href="#" className="hover:scale-110 transition-transform" style={{ color: PALETTE.brown }}>
+              <FaFacebookF />
+            </a>
+            <a href="#" className="hover:scale-110 transition-transform" style={{ color: PALETTE.brown }}>
+              <FaTwitter />
+            </a>
+          </div>
         </div>
 
         {/* Quick Links */}
-        <div>
+        <div className="text-center md:text-left">
           <h3 className="font-bold text-lg mb-3" style={{ color: PALETTE.brown }}>
             Quick Links
           </h3>
@@ -46,7 +59,7 @@ const Footer = () => {
         </div>
 
         {/* Resources */}
-        <div>
+        <div className="text-center md:text-left">
           <h3 className="font-bold text-lg mb-3" style={{ color: PALETTE.brown }}>
             Resources
           </h3>
@@ -58,12 +71,37 @@ const Footer = () => {
           </ul>
         </div>
 
-        
+        {/* Newsletter */}
+        <div className="text-center md:text-left">
+          <h3 className="font-bold text-lg mb-3" style={{ color: PALETTE.brown }}>
+            Stay Updated
+          </h3>
+          <p className="text-gray-700 text-sm mb-4">
+            Subscribe for tasty new recipes delivered weekly.
+          </p>
+          <div className="flex gap-2 justify-center md:justify-start">
+            <input
+              type="email"
+              placeholder="Your email"
+              className="px-3 py-2 rounded-lg border w-full"
+              style={{
+                borderColor: PALETTE.tan,
+                background: "white",
+              }}
+            />
+            <button
+              className="px-4 py-2 rounded-lg text-white"
+              style={{ background: PALETTE.brown }}
+            >
+              Join
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Bottom strip */}
       <div className="text-center mt-10 text-sm text-gray-700">
-        © {new Date().getFullYear()} PantryPal — Crafted with ❤️ & good food.
+        © {new Date().getFullYear()} <strong>PantryPal</strong> — Crafted with ❤️ & great food.
       </div>
     </footer>
   );

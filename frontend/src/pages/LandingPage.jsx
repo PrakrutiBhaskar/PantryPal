@@ -2,7 +2,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiSearch } from "react-icons/fi";
 import { FaHeart, FaStar, FaUtensils, FaMobileAlt } from "react-icons/fa";
 
 const PALETTE = {
@@ -12,10 +11,11 @@ const PALETTE = {
   beige: "#F3D79E",
 };
 
-const BG_IMAGE = "/images/doodles-bg.png"; // ← put your background image in public/images/
+const BG_IMAGE = "/images/doodles-bg.png"; // Ensure this file exists in public/images/
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
 
   return (
     <div
@@ -54,8 +54,8 @@ const LandingPage = () => {
             + Create Recipe
           </button>
 
-          <Link
-            to="/signup"
+          <button
+            onClick={() => navigate(token ? "/home" : "/signup")}
             className="px-6 py-3 rounded-lg border shadow"
             style={{
               borderColor: PALETTE.brown,
@@ -64,7 +64,7 @@ const LandingPage = () => {
             }}
           >
             Browse All
-          </Link>
+          </button>
         </div>
       </section>
 
@@ -79,8 +79,14 @@ const LandingPage = () => {
 
         <div className="grid md:grid-cols-3 gap-8">
           {/* Card 1 */}
-          <div className="p-6 bg-white/70 rounded-xl shadow-md border" style={{ borderColor: PALETTE.tan }}>
-            <FaUtensils className="text-4xl mb-4" style={{ color: PALETTE.brown }} />
+          <div
+            className="p-6 bg-white/70 rounded-xl shadow-md border"
+            style={{ borderColor: PALETTE.tan }}
+          >
+            <FaUtensils
+              className="text-4xl mb-4"
+              style={{ color: PALETTE.brown }}
+            />
             <h3 className="text-xl font-semibold mb-2">Curated Recipes</h3>
             <p className="text-gray-600">
               Explore thousands of uniquely crafted recipes across all cuisines.
@@ -88,8 +94,14 @@ const LandingPage = () => {
           </div>
 
           {/* Card 2 */}
-          <div className="p-6 bg-white/70 rounded-xl shadow-md border" style={{ borderColor: PALETTE.tan }}>
-            <FaHeart className="text-4xl mb-4" style={{ color: PALETTE.brown }} />
+          <div
+            className="p-6 bg-white/70 rounded-xl shadow-md border"
+            style={{ borderColor: PALETTE.tan }}
+          >
+            <FaHeart
+              className="text-4xl mb-4"
+              style={{ color: PALETTE.brown }}
+            />
             <h3 className="text-xl font-semibold mb-2">Save & Like</h3>
             <p className="text-gray-600">
               Keep your favourite recipes and access them anytime, anywhere.
@@ -97,8 +109,14 @@ const LandingPage = () => {
           </div>
 
           {/* Card 3 */}
-          <div className="p-6 bg-white/70 rounded-xl shadow-md border" style={{ borderColor: PALETTE.tan }}>
-            <FaStar className="text-4xl mb-4" style={{ color: PALETTE.brown }} />
+          <div
+            className="p-6 bg-white/70 rounded-xl shadow-md border"
+            style={{ borderColor: PALETTE.tan }}
+          >
+            <FaStar
+              className="text-4xl mb-4"
+              style={{ color: PALETTE.brown }}
+            />
             <h3 className="text-xl font-semibold mb-2">Community Ratings</h3>
             <p className="text-gray-600">
               See trending dishes and top-rated recipes from the community.
@@ -106,8 +124,6 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
-
-      
 
       {/* ----------------- TESTIMONIALS ----------------- */}
       <section className="py-20 px-6 md:px-20 bg-white/70 backdrop-blur-sm">
@@ -137,7 +153,10 @@ const LandingPage = () => {
 
       {/* ----------------- APP CTA ----------------- */}
       <section className="py-20 px-6 md:px-20 text-center">
-        <FaMobileAlt className="text-5xl mx-auto mb-4" style={{ color: PALETTE.brown }} />
+        <FaMobileAlt
+          className="text-5xl mx-auto mb-4"
+          style={{ color: PALETTE.brown }}
+        />
 
         <h2
           className="text-4xl font-bold mb-4"
@@ -149,8 +168,6 @@ const LandingPage = () => {
           Cook, save recipes, and shop ingredients — all in one place.
         </p>
       </section>
-
-      
     </div>
   );
 };

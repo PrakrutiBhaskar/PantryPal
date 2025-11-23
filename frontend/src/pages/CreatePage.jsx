@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+// ✅ Production-ready API URL
+const API_URL = import.meta.env.VITE_API_URL;
+
 // Bakery Palette
 const PALETTE = {
   beige: "#F3D79E",
@@ -48,7 +51,11 @@ const CreatePage = () => {
       return navigate("/login");
     }
 
-    if (!formData.title.trim() || !formData.ingredients.trim() || !formData.steps.trim()) {
+    if (
+      !formData.title.trim() ||
+      !formData.ingredients.trim() ||
+      !formData.steps.trim()
+    ) {
       toast.error("Please fill in all required fields.");
       return;
     }
@@ -60,7 +67,8 @@ const CreatePage = () => {
       );
       images.forEach((img) => formDataToSend.append("images", img));
 
-      const res = await fetch("http://localhost:5001/api/recipes", {
+      // ✅ Updated API URL
+      const res = await fetch(`${API_URL}/api/recipes`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formDataToSend,
@@ -101,37 +109,22 @@ const CreatePage = () => {
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Input Group */}
-          {[
-            {
-              label: "Recipe Title *",
-              type: "text",
-              name: "title",
-              placeholder: "e.g., Creamy Pasta",
-            },
-          ].map((field, i) => (
-            <div key={i}>
-              <label
-                className="block mb-1 font-semibold"
-                style={{ color: PALETTE.brown }}
-              >
-                {field.label}
-              </label>
-              <input
-                type={field.type}
-                name={field.name}
-                value={formData[field.name]}
-                onChange={handleChange}
-                placeholder={field.placeholder}
-                className="w-full px-4 py-3 rounded-xl outline-none"
-                style={{
-                  border: `1px solid ${PALETTE.tan}`,
-                  background: "white",
-                }}
-                required
-              />
-            </div>
-          ))}
+          {/* Title */}
+          <div>
+            <label className="block mb-1 font-semibold" style={{ color: PALETTE.brown }}>
+              Recipe Title *
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              placeholder="e.g., Creamy Pasta"
+              className="w-full px-4 py-3 rounded-xl outline-none"
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
+              required
+            />
+          </div>
 
           {/* Ingredients */}
           <div>
@@ -145,10 +138,7 @@ const CreatePage = () => {
               placeholder="List ingredients separated by commas"
               rows={3}
               className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
               required
             ></textarea>
           </div>
@@ -165,10 +155,7 @@ const CreatePage = () => {
               placeholder="Describe step-by-step instructions"
               rows={5}
               className="w-full px-4 py-3 rounded-xl outline-none"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
               required
             ></textarea>
           </div>
@@ -237,14 +224,11 @@ const CreatePage = () => {
               multiple
               onChange={handleImageChange}
               className="w-full px-4 py-3 rounded-xl cursor-pointer"
-              style={{
-                border: `1px solid ${PALETTE.tan}`,
-                background: "white",
-              }}
+              style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
             />
           </div>
 
-          {/* Image Previews */}
+          {/* Image Preview */}
           {images.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
               {images.map((img, index) => (

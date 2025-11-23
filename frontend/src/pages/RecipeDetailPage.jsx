@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_URL = import.meta.env.VITE_API_URL; // ✅ Render-safe
 
 // Bakery Palette
 const PALETTE = {
@@ -33,7 +33,7 @@ const RecipeDetailPage = () => {
         return;
       }
 
-      setRecipe(data);
+      setRecipe(data.recipe || data); // backend may return wrapped object
       setLoading(false);
     } catch (err) {
       toast.error("Failed to load recipe");
@@ -57,7 +57,7 @@ const RecipeDetailPage = () => {
 
       const data = await res.json();
       if (res.ok) {
-        toast.success(data.message);
+        toast.success(data.message || "Liked!");
         fetchRecipe();
       } else toast.error(data.message);
     } catch {
@@ -76,8 +76,10 @@ const RecipeDetailPage = () => {
       });
 
       const data = await res.json();
-      if (res.ok) toast.success(data.message);
-      else toast.error(data.message);
+      if (res.ok) {
+        toast.success(data.message || "Updated favorites");
+        fetchRecipe();
+      } else toast.error(data.message);
     } catch {
       toast.error("Error favoriting recipe");
     }
@@ -100,9 +102,13 @@ const RecipeDetailPage = () => {
       </p>
     );
 
+  const images = recipe.images?.length ? recipe.images : ["no-image.png"];
+
   return (
-    <div className="kanit-light max-w-5xl mx-auto p-6" style={{ background: PALETTE.cream }}>
-      
+    <div
+      className="kanit-light max-w-5xl mx-auto p-6"
+      style={{ background: PALETTE.cream }}
+    >
       {/* Back Button */}
       <button
         className="px-5 py-2 rounded-xl shadow mb-5"
@@ -129,41 +135,35 @@ const RecipeDetailPage = () => {
         className="carousel w-full rounded-2xl shadow-xl mb-10"
         style={{ border: `1px solid ${PALETTE.tan}` }}
       >
-        {(recipe.images?.length ? recipe.images : ["/placeholder.jpg"] ).map(
-          (img, index) => (
-            <div
-              id={`slide${index}`}
-              key={index}
-              className="carousel-item relative w-full"
-            >
-              <img
-                src={img.startsWith("http") ? img : `${API_URL}/${img}`}
-                className="w-full object-cover max-h-[500px]"
-                alt="Recipe"
-              />
+        {images.map((img, index) => (
+          <div
+            id={`slide${index}`}
+            key={index}
+            className="carousel-item relative w-full"
+          >
+            <img
+              src={img.startsWith("http") ? img : `${API_URL}/${img}`}
+              className="w-full object-cover max-h-[500px]"
+              alt="Recipe"
+            />
 
-              {/* Navigation Arrows */}
-              <div className="absolute flex justify-between left-5 right-5 top-1/2 transform -translate-y-1/2">
-                <a
-                  href={`#slide${
-                    index === 0 ? recipe.images.length - 1 : index - 1
-                  }`}
-                  className="btn btn-circle"
-                >
-                  ❮
-                </a>
-                <a
-                  href={`#slide${
-                    index === recipe.images.length - 1 ? 0 : index + 1
-                  }`}
-                  className="btn btn-circle"
-                >
-                  ❯
-                </a>
-              </div>
+            {/* Navigation Arrows */}
+            <div className="absolute flex justify-between left-5 right-5 top-1/2 -translate-y-1/2">
+              <a
+                href={`#slide${index === 0 ? images.length - 1 : index - 1}`}
+                className="btn btn-circle"
+              >
+                ❮
+              </a>
+              <a
+                href={`#slide${index === images.length - 1 ? 0 : index + 1}`}
+                className="btn btn-circle"
+              >
+                ❯
+              </a>
             </div>
-          )
-        )}
+          </div>
+        ))}
       </div>
 
       {/* Like + Favorite + Author */}
@@ -177,8 +177,8 @@ const RecipeDetailPage = () => {
         </button>
 
         <button
-          style={{ color: PALETTE.beige }}
           onClick={handleFavorite}
+          style={{ color: PALETTE.beige }}
         >
           ⭐ Favorite
         </button>
@@ -193,7 +193,6 @@ const RecipeDetailPage = () => {
 
       {/* Ingredients + Steps */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        
         {/* Ingredients */}
         <div
           className="p-6 rounded-xl shadow-md"
@@ -203,7 +202,9 @@ const RecipeDetailPage = () => {
             Ingredients 🧂
           </h2>
           <p className="text-gray-700 whitespace-pre-line">
-            {recipe.ingredients}
+            {Array.isArray(recipe.ingredients)
+              ? recipe.ingredients.join(", ")
+              : recipe.ingredients}
           </p>
         </div>
 
@@ -215,9 +216,7 @@ const RecipeDetailPage = () => {
           <h2 className="text-2xl font-bold mb-3" style={{ color: PALETTE.brown }}>
             Steps 👨‍🍳
           </h2>
-          <p className="text-gray-700 whitespace-pre-line">
-            {recipe.steps}
-          </p>
+          <p className="text-gray-700 whitespace-pre-line">{recipe.steps}</p>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const PALETTE = {
   cream: "#F2E3C6",
@@ -13,7 +13,6 @@ const AllRecipes = () => {
   const [recipes, setRecipes] = useState([]);
   const navigate = useNavigate();
 
-  // Fetch all recipes
   const fetchRecipes = async () => {
     try {
       const res = await fetch(`${API_URL}/api/recipes`);
@@ -57,7 +56,7 @@ const AllRecipes = () => {
               <img
                 src={
                   recipe.images?.length
-                    ? `${API_URL}/${recipe.images[0]}`
+                    ? `${API_URL}/${recipe.images[0].replace(/\\/g, "/")}`
                     : "https://via.placeholder.com/400x300?text=No+Image"
                 }
                 className="w-full h-56 object-cover"
