@@ -1,6 +1,7 @@
-📌 About the Project
-    PantryPal is a modern full-stack recipe management platform designed to help users discover, create, organize, and share delicious recipes with ease.
-    Built with a clean UI, personalized experience, and powerful backend, PantryPal transforms         your cooking journey.
+🍽️ PantryPal – Smart Recipe Manager
+
+PantryPal is a modern full-stack recipe management platform designed to help users discover, create, organize, and share delicious recipes with ease.
+Built with a clean UI, personalized experience, and powerful backend, PantryPal transforms your cooking journey.
 -------------------------------------------------------------------------------------------------
 
 ✨ Features  
