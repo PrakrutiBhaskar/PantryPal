@@ -20,7 +20,7 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
-import AboutUs from "./pages/AboutUS.jsx";
+import AboutUs from "./pages/AboutUs.jsx";
 import AllRecipes from "./pages/Allrecipes.jsx";
 
 const App = () => {
