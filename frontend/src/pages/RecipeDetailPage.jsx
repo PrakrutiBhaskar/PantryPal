@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const API_URL = import.meta.env.VITE_API_URL; // ✅ Render-safe
+const API_URL = import.meta.env.VITE_API_URL;
 
-// Bakery Palette
 const PALETTE = {
   beige: "#F3D79E",
   brown: "#B57655",
@@ -13,6 +12,12 @@ const PALETTE = {
   nude: "#D0B79A",
   caramel: "#BA8C73",
   black: "#000000",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 const RecipeDetailPage = () => {
@@ -26,26 +31,27 @@ const RecipeDetailPage = () => {
   const fetchRecipe = async () => {
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}`);
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (!res.ok) {
         toast.error(data.message || "Error loading recipe");
+        navigate("/home");
         return;
       }
 
-      setRecipe(data.recipe || data); // backend may return wrapped object
-      setLoading(false);
+      setRecipe(data.recipe || data);
     } catch (err) {
+      console.error("Error fetching recipe:", err);
       toast.error("Failed to load recipe");
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchRecipe();
-  }, [id]);
+  }, [id]); // ✅ id in dependency array
 
-  // Like
   const handleLike = async () => {
     if (!token) return navigate("/login");
 
@@ -55,17 +61,20 @@ const RecipeDetailPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
+
       if (res.ok) {
         toast.success(data.message || "Liked!");
         fetchRecipe();
-      } else toast.error(data.message);
-    } catch {
+      } else {
+        toast.error(data.message || "Failed to like recipe");
+      }
+    } catch (err) {
+      console.error("Error liking recipe:", err);
       toast.error("Error liking recipe");
     }
   };
 
-  // Favorite
   const handleFavorite = async () => {
     if (!token) return navigate("/login");
 
@@ -75,12 +84,16 @@ const RecipeDetailPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
+
       if (res.ok) {
         toast.success(data.message || "Updated favorites");
         fetchRecipe();
-      } else toast.error(data.message);
-    } catch {
+      } else {
+        toast.error(data.message || "Failed to update favorites");
+      }
+    } catch (err) {
+      console.error("Error favoriting recipe:", err);
       toast.error("Error favoriting recipe");
     }
   };
@@ -142,43 +155,50 @@ const RecipeDetailPage = () => {
             className="carousel-item relative w-full"
           >
             <img
-              src={img.startsWith("http") ? img : `${API_URL}/${img}`}
+              src={
+                img.startsWith("http")
+                  ? img
+                  : `${API_URL}/${img.replace(/\\/g, "/")}`
+              }
               className="w-full object-cover max-h-[500px]"
-              alt="Recipe"
+              alt={`Recipe image ${index + 1}`}
             />
 
-            {/* Navigation Arrows */}
-            <div className="absolute flex justify-between left-5 right-5 top-1/2 -translate-y-1/2">
-              <a
-                href={`#slide${index === 0 ? images.length - 1 : index - 1}`}
-                className="btn btn-circle"
-              >
-                ❮
-              </a>
-              <a
-                href={`#slide${index === images.length - 1 ? 0 : index + 1}`}
-                className="btn btn-circle"
-              >
-                ❯
-              </a>
-            </div>
+            {/* Only show nav arrows if multiple images */}
+            {images.length > 1 && (
+              <div className="absolute flex justify-between left-5 right-5 top-1/2 -translate-y-1/2">
+                <a
+                  href={`#slide${index === 0 ? images.length - 1 : index - 1}`}
+                  className="btn btn-circle"
+                >
+                  ❮
+                </a>
+                <a
+                  href={`#slide${index === images.length - 1 ? 0 : index + 1}`}
+                  className="btn btn-circle"
+                >
+                  ❯
+                </a>
+              </div>
+            )}
           </div>
         ))}
       </div>
 
       {/* Like + Favorite + Author */}
-      <div className="flex items-center gap-6 mb-10 text-xl">
+      <div className="flex flex-wrap items-center gap-6 mb-10 text-xl">
         <button
           className="flex items-center gap-2"
           onClick={handleLike}
           style={{ color: PALETTE.caramel }}
         >
-          ❤️ {recipe.likes}
+          ❤️ {recipe.likes || 0}
         </button>
 
         <button
           onClick={handleFavorite}
-          style={{ color: PALETTE.beige }}
+          style={{ color: PALETTE.brown }}
+          className="flex items-center gap-2"
         >
           ⭐ Favorite
         </button>
@@ -193,7 +213,6 @@ const RecipeDetailPage = () => {
 
       {/* Ingredients + Steps */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* Ingredients */}
         <div
           className="p-6 rounded-xl shadow-md"
           style={{ background: "white", border: `1px solid ${PALETTE.tan}` }}
@@ -204,11 +223,10 @@ const RecipeDetailPage = () => {
           <p className="text-gray-700 whitespace-pre-line">
             {Array.isArray(recipe.ingredients)
               ? recipe.ingredients.join(", ")
-              : recipe.ingredients}
+              : recipe.ingredients || "No ingredients listed"}
           </p>
         </div>
 
-        {/* Steps */}
         <div
           className="p-6 rounded-xl shadow-md"
           style={{ background: "white", border: `1px solid ${PALETTE.tan}` }}
@@ -216,7 +234,9 @@ const RecipeDetailPage = () => {
           <h2 className="text-2xl font-bold mb-3" style={{ color: PALETTE.brown }}>
             Steps 👨‍🍳
           </h2>
-          <p className="text-gray-700 whitespace-pre-line">{recipe.steps}</p>
+          <p className="text-gray-700 whitespace-pre-line">
+            {recipe.steps || "No steps provided"}
+          </p>
         </div>
       </div>
 
@@ -243,7 +263,7 @@ const RecipeDetailPage = () => {
           </p>
           <p>
             <strong style={{ color: PALETTE.caramel }}>Cooking Time:</strong>{" "}
-            {recipe.cookingTime} mins
+            {recipe.cookingTime ? `${recipe.cookingTime} mins` : "Not specified"}
           </p>
         </div>
       </div>

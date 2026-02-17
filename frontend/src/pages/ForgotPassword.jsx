@@ -2,12 +2,18 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import backgroundImage from "../assets/background.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL; // ✅ Production backend URL
+const API_URL = import.meta.env.VITE_API_URL;
 
 const PALETTE = {
   cream: "#F2E3C6",
   tan: "#E7D2AC",
   brown: "#B57655",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 const ForgotPassword = () => {
@@ -25,7 +31,7 @@ const ForgotPassword = () => {
         body: JSON.stringify({ email }),
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
         toast.success("Reset link sent to your email!");
@@ -34,8 +40,8 @@ const ForgotPassword = () => {
         toast.error(data.message || "Unable to send reset link");
       }
     } catch (err) {
+      console.error("Forgot password error:", err);
       toast.error("Server error. Try again later.");
-      console.error("❌ Forgot password error:", err);
     } finally {
       setLoading(false);
     }
@@ -83,18 +89,19 @@ const ForgotPassword = () => {
             type="submit"
             disabled={loading}
             className="btn w-full text-white"
-            style={{ background: PALETTE.brown, borderColor: PALETTE.brown }}
+            style={{
+              background: PALETTE.brown,
+              borderColor: PALETTE.brown,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
           >
             {loading ? "Sending..." : "Send Reset Link"}
           </button>
         </form>
 
         <p className="text-center mt-4">
-          <a
-            href="/login"
-            style={{ color: PALETTE.brown }}
-            className="underline"
-          >
+          <a href="/login" style={{ color: PALETTE.brown }} className="underline">
             Back to Login
           </a>
         </p>

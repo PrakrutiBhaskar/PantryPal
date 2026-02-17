@@ -20,9 +20,6 @@ const router = express.Router();
 router.get("/my", protect, getMyRecipes);
 router.get("/favorites", protect, getFavoriteRecipes);
 router.get("/liked", protect, getLikedRecipes);
-router.get("/", getAllRecipes);
-
-
  
 router.post("/", protect, uploadRecipe, createRecipe);
 router.put("/:id", protect, updateRecipe);

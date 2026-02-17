@@ -2,10 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-// ✅ Always use Render backend URL
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Bakery Palette
 const PALETTE = {
   beige: "#F3D79E",
   brown: "#B57655",
@@ -14,6 +12,12 @@ const PALETTE = {
   nude: "#D0B79A",
   caramel: "#BA8C73",
   black: "#000000",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 const Favorites = () => {
@@ -29,7 +33,6 @@ const Favorites = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ❌ Token invalid → logout user
       if (res.status === 401) {
         toast.error("Session expired. Please log in again.");
         localStorage.removeItem("token");
@@ -37,20 +40,28 @@ const Favorites = () => {
         return;
       }
 
-      const data = await res.json();
-      setRecipes(data);
-      setLoading(false);
+      const data = await safeJson(res); // ✅ Safe parse
+
+      if (res.ok) {
+        setRecipes(Array.isArray(data) ? data : []);
+      } else {
+        toast.error(data.message || "Failed to load favorites");
+      }
     } catch (err) {
       toast.error("Failed to load favorites");
-      console.error("❌ Error fetching favorites:", err);
+      console.error("Error fetching favorites:", err);
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!token) return navigate("/login");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
     fetchFavorites();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUnfavorite = async (id) => {
     try {
@@ -59,7 +70,7 @@ const Favorites = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
         toast.success("Removed from favorites");
@@ -68,6 +79,7 @@ const Favorites = () => {
         toast.error(data.message || "Failed to update favorite");
       }
     } catch (error) {
+      console.error("Error removing favorite:", error);
       toast.error("Error removing favorite");
     }
   };
@@ -88,7 +100,6 @@ const Favorites = () => {
       className="kanit-light px-6 md:px-16 py-10"
       style={{ background: PALETTE.cream }}
     >
-      {/* Title */}
       <h1
         className="text-4xl font-bold text-center mb-10"
         style={{ color: PALETTE.brown }}
@@ -99,7 +110,7 @@ const Favorites = () => {
       {recipes.length === 0 ? (
         <div className="text-center mt-20">
           <p className="text-lg mb-4" style={{ color: PALETTE.caramel }}>
-            You haven’t favorited any recipes yet.
+            You haven't favorited any recipes yet.
           </p>
           <button
             onClick={() => navigate("/home")}
@@ -124,7 +135,6 @@ const Favorites = () => {
               className="rounded-2xl shadow-md overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
               style={{ background: "white", border: `1px solid ${PALETTE.tan}` }}
             >
-              {/* Image */}
               <img
                 src={
                   recipe.images?.length
@@ -136,7 +146,6 @@ const Favorites = () => {
                 onClick={() => navigate(`/recipe/${recipe._id}`)}
               />
 
-              {/* Body */}
               <div className="p-5">
                 <h3
                   className="text-xl font-semibold truncate mb-2 cursor-pointer"
@@ -147,12 +156,13 @@ const Favorites = () => {
                 </h3>
 
                 <p className="text-sm opacity-80 mb-3">
-                  {recipe.ingredients?.slice(0, 80)}...
+                  {/* ✅ Safe ingredients display — handles both array and string */}
+                  {Array.isArray(recipe.ingredients)
+                    ? recipe.ingredients.join(", ").slice(0, 80) + "..."
+                    : (recipe.ingredients || "").slice(0, 80) + "..."}
                 </p>
 
-                {/* Buttons */}
                 <div className="flex justify-between items-center mt-4">
-                  {/* Remove Button */}
                   <button
                     onClick={() => handleUnfavorite(recipe._id)}
                     className="px-3 py-2 text-white rounded-xl"
@@ -161,7 +171,6 @@ const Favorites = () => {
                     ❌ Remove
                   </button>
 
-                  {/* View Button */}
                   <button
                     onClick={() => navigate(`/recipe/${recipe._id}`)}
                     className="px-3 py-2 rounded-xl text-white"

@@ -3,13 +3,19 @@ import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import backgroundImage from "../assets/background.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL; // ✅ Render-safe
+const API_URL = import.meta.env.VITE_API_URL;
 
 const PALETTE = {
   cream: "#F2E3C6",
   tan: "#E7D2AC",
   brown: "#B57655",
   beige: "#F3D79E",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 const ResetPassword = () => {
@@ -29,23 +35,20 @@ const ResetPassword = () => {
     }
 
     if (password !== confirm) {
-      toast.error("Passwords do not match ❌");
+      toast.error("Passwords do not match");
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${API_URL}/api/users/reset-password/${token}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password }),
-        }
-      );
+      const res = await fetch(`${API_URL}/api/users/reset-password/${token}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
         toast.success("Password reset successful! 🎉");
@@ -54,6 +57,7 @@ const ResetPassword = () => {
         toast.error(data.message || "Invalid or expired link");
       }
     } catch (err) {
+      console.error("Reset password error:", err);
       toast.error("Server error. Try again later.");
     } finally {
       setLoading(false);
@@ -77,7 +81,6 @@ const ResetPassword = () => {
           backdropFilter: "blur(10px)",
         }}
       >
-        {/* Decorative circle */}
         <div
           className="absolute w-24 h-24 rounded-full opacity-40"
           style={{
@@ -86,7 +89,7 @@ const ResetPassword = () => {
             right: "-30px",
             filter: "blur(8px)",
           }}
-        ></div>
+        />
 
         <h1
           className="text-3xl font-bold text-center mb-6"
@@ -100,36 +103,30 @@ const ResetPassword = () => {
         </p>
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          {/* New Password */}
           <div>
             <label className="font-semibold mb-1 block">New Password</label>
             <input
               type="password"
               placeholder="Enter new password"
               className="input input-bordered w-full"
-              style={{
-                borderColor: PALETTE.tan,
-                background: "white",
-              }}
+              style={{ borderColor: PALETTE.tan, background: "white" }}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              minLength={6}
               required
             />
           </div>
 
-          {/* Confirm Password */}
           <div>
             <label className="font-semibold mb-1 block">Confirm Password</label>
             <input
               type="password"
               placeholder="Confirm password"
               className="input input-bordered w-full"
-              style={{
-                borderColor: PALETTE.tan,
-                background: "white",
-              }}
+              style={{ borderColor: PALETTE.tan, background: "white" }}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
+              minLength={6}
               required
             />
           </div>
@@ -139,6 +136,8 @@ const ResetPassword = () => {
             style={{
               background: PALETTE.brown,
               borderColor: PALETTE.brown,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
             }}
             disabled={loading}
           >
@@ -146,13 +145,8 @@ const ResetPassword = () => {
           </button>
         </form>
 
-        {/* Back to Login */}
         <p className="text-center mt-6">
-          <a
-            href="/login"
-            className="underline"
-            style={{ color: PALETTE.brown }}
-          >
+          <a href="/login" className="underline" style={{ color: PALETTE.brown }}>
             Back to Login
           </a>
         </p>

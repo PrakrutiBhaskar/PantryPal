@@ -6,8 +6,7 @@ import rateLimiter from "./middleware/rateLimiter.js";
 import userRoutes from "./routes/userRoutes.js";
 import cors from "cors";
 import path from "path";
-import contactRoutes from "./routes/contactRoutes.js";   // ✅ FIXED PATH
-
+import contactRoutes from "./routes/contactRoutes.js";  
 dotenv.config();
 
 const app = express();

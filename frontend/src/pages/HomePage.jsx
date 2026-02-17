@@ -10,10 +10,8 @@ import {
   FaSearch,
 } from "react-icons/fa";
 
-// ✅ Always use Render backend URL
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Bakery Palette
 const PALETTE = {
   beige: "#F3D79E",
   brown: "#B57655",
@@ -22,6 +20,12 @@ const PALETTE = {
   nude: "#D0B79A",
   caramel: "#BA8C73",
   black: "#000000",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 export default function HomePage() {
@@ -44,24 +48,25 @@ export default function HomePage() {
     const onScroll = () => setParallaxY(window.scrollY * 0.12);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 🎯 FETCH RECIPES
   async function fetchRecipes() {
     try {
       setLoading(true);
-
       const res = await fetch(`${API_URL}/api/recipes`);
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
-      const list = data.recipes || data || [];
+      if (!res.ok) {
+        toast.error(data.message || "Failed to load recipes.");
+        return;
+      }
 
+      const list = Array.isArray(data) ? data : data.recipes || [];
       setRecipes(list);
 
       const sortedTrending = [...list]
         .sort((a, b) => (b.likes || 0) - (a.likes || 0))
         .slice(0, 8);
-
       setTrending(sortedTrending);
     } catch (err) {
       console.error("Failed to load recipes", err);
@@ -71,7 +76,6 @@ export default function HomePage() {
     }
   }
 
-  // 🎨 APPLY THEME
   function applyTheme(t) {
     const root = document.documentElement;
     if (t === "dark") {
@@ -96,7 +100,6 @@ export default function HomePage() {
   function scrollCarousel(dir = 1) {
     const el = carouselRef.current;
     if (!el) return;
-
     const card = el.querySelector(".tr-card");
     const scrollAmount = (card?.offsetWidth || 300) + 16;
     el.scrollBy({ left: dir * scrollAmount, behavior: "smooth" });
@@ -109,7 +112,6 @@ export default function HomePage() {
     navigate(`/search?q=${encodeURIComponent(q)}`);
   }
 
-  // ⭐ SKELETON SHIMMER
   const Skeleton = ({ h = 44 }) => (
     <div className="rounded-2xl overflow-hidden" style={{ background: "var(--card)" }}>
       <div className="skeleton-image" style={{ width: "100%", height: `${h}px` }} />
@@ -123,7 +125,6 @@ export default function HomePage() {
 
   return (
     <div className="kanit-light" style={{ background: "var(--bg)" }}>
-      {/* ⭐ INLINE CSS FOR PARALLAX / SKELETONS */}
       <style>{`
         .glass {
           background: rgba(255,255,255,0.55);
@@ -139,19 +140,18 @@ export default function HomePage() {
           border-radius: 6px;
         }
         @keyframes shimmer {
-          0% { background-position: 200% 0; };
-          100% { background-position: -200% 0; };
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
         .hero-wrap { overflow: visible; }
         .tr-scroll { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
       `}</style>
 
-      {/* ⭐ HERO SECTION */}
+      {/* HERO SECTION */}
       <section
         className="hero-wrap relative flex flex-col items-center text-center px-6 md:px-12 py-20 md:py-28"
         style={{ minHeight: "56vh" }}
       >
-        {/* PARALLAX BG */}
         <div
           className="absolute inset-0"
           style={{
@@ -163,8 +163,6 @@ export default function HomePage() {
             filter: theme === "dark" ? "brightness(.6) contrast(.9)" : "none",
           }}
         />
-
-        {/* OVERLAY */}
         <div
           className="absolute inset-0"
           style={{
@@ -196,7 +194,6 @@ export default function HomePage() {
             >
               Create Recipe
             </button>
-
             <button
               onClick={() => navigate("/search")}
               className="px-6 py-3 rounded-xl border"
@@ -207,7 +204,7 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        {/* ⭐ GLASS SEARCH BAR */}
+        {/* GLASS SEARCH BAR */}
         <motion.form
           onSubmit={onSearch}
           initial={{ opacity: 0, y: 20 }}
@@ -220,7 +217,6 @@ export default function HomePage() {
             style={{ border: `1px solid ${PALETTE.tan}` }}
           >
             <FaSearch className="text-xl" style={{ color: PALETTE.brown }} />
-
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -228,7 +224,6 @@ export default function HomePage() {
               className="w-full outline-none text-lg bg-transparent ml-3"
               style={{ color: "var(--text)" }}
             />
-
             <button
               type="button"
               onClick={toggleTheme}
@@ -241,7 +236,6 @@ export default function HomePage() {
                 <FaSun style={{ color: "#ffd86b" }} />
               )}
             </button>
-
             <button
               type="submit"
               className="ml-3 px-4 py-2 rounded-lg"
@@ -255,13 +249,12 @@ export default function HomePage() {
 
       <div style={{ height: 90 }} />
 
-      {/* ⭐ TRENDING */}
+      {/* TRENDING */}
       <section className="px-6 md:px-12 py-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold" style={{ color: PALETTE.brown }}>
             Trending Recipes
           </h2>
-
           <div className="flex gap-2">
             <button onClick={() => scrollCarousel(-1)} className="p-2 rounded-full">
               <FaChevronLeft />
@@ -301,7 +294,6 @@ export default function HomePage() {
                     alt={r.title}
                     className="w-full h-44 object-cover"
                   />
-
                   <div className="p-4">
                     <h3
                       className="text-xl font-semibold mb-2 truncate"
@@ -327,7 +319,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ⭐ EXPLORE RECIPES */}
+      {/* EXPLORE RECIPES */}
       <section className="px-6 md:px-16 py-12">
         <h2 className="text-3xl font-bold text-center mb-8" style={{ color: PALETTE.brown }}>
           Explore Recipes
@@ -359,7 +351,6 @@ export default function HomePage() {
                     alt={recipe.title}
                     className="w-full h-44 object-cover"
                   />
-
                   <div className="p-4">
                     <h3
                       className="text-xl font-semibold mb-2 truncate"
@@ -367,18 +358,15 @@ export default function HomePage() {
                     >
                       {recipe.title}
                     </h3>
-
                     <p className="text-sm opacity-80 mb-4">
                       {Array.isArray(recipe.ingredients)
                         ? recipe.ingredients.slice(0, 4).join(", ")
                         : recipe.ingredients || "No ingredients listed"}
                     </p>
-
                     <div className="flex justify-between items-center">
                       <span style={{ color: PALETTE.caramel }}>
                         ❤️ {recipe.likes || 0}
                       </span>
-
                       <button
                         onClick={() => navigate(`/recipe/${recipe._id}`)}
                         className="px-4 py-2 rounded-lg"
@@ -392,7 +380,6 @@ export default function HomePage() {
               ))}
         </div>
 
-        {/* VIEW ALL BUTTON */}
         {!loading && (
           <div className="flex justify-center mt-10">
             <button

@@ -2,10 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-// ✅ Production-ready API URL
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Bakery Palette
 const PALETTE = {
   beige: "#F3D79E",
   brown: "#B57655",
@@ -14,6 +12,12 @@ const PALETTE = {
   nude: "#D0B79A",
   caramel: "#BA8C73",
   black: "#000000",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 const CreatePage = () => {
@@ -29,14 +33,13 @@ const CreatePage = () => {
   });
 
   const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false); // ✅ Added loading state
 
-  // Update fields
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle image selection
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     setImages(files);
@@ -51,14 +54,12 @@ const CreatePage = () => {
       return navigate("/login");
     }
 
-    if (
-      !formData.title.trim() ||
-      !formData.ingredients.trim() ||
-      !formData.steps.trim()
-    ) {
+    if (!formData.title.trim() || !formData.ingredients.trim() || !formData.steps.trim()) {
       toast.error("Please fill in all required fields.");
       return;
     }
+
+    setLoading(true); // ✅ Set loading before request
 
     try {
       const formDataToSend = new FormData();
@@ -67,14 +68,13 @@ const CreatePage = () => {
       );
       images.forEach((img) => formDataToSend.append("images", img));
 
-      // ✅ Updated API URL
       const res = await fetch(`${API_URL}/api/recipes`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formDataToSend,
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
         toast.success("Recipe created successfully! 🍳");
@@ -83,8 +83,10 @@ const CreatePage = () => {
         toast.error(data.message || "Failed to create recipe.");
       }
     } catch (error) {
-      console.error("❌ Error creating recipe:", error);
+      console.error("Error creating recipe:", error);
       toast.error("Something went wrong. Try again!");
+    } finally {
+      setLoading(false); // ✅ Always reset loading
     }
   };
 
@@ -100,7 +102,6 @@ const CreatePage = () => {
           border: `1px solid ${PALETTE.tan}`,
         }}
       >
-        {/* Title */}
         <h2
           className="text-4xl font-bold text-center mb-6"
           style={{ color: PALETTE.brown }}
@@ -208,6 +209,7 @@ const CreatePage = () => {
               value={formData.cookingTime}
               onChange={handleChange}
               placeholder="e.g., 30"
+              min="1"
               className="w-full px-4 py-3 rounded-xl outline-none"
               style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
             />
@@ -246,10 +248,16 @@ const CreatePage = () => {
           {/* Submit */}
           <button
             type="submit"
+            disabled={loading}
             className="mt-6 py-3 text-lg rounded-xl shadow-md"
-            style={{ background: PALETTE.brown, color: "white" }}
+            style={{
+              background: PALETTE.brown,
+              color: "white",
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
           >
-            Submit Recipe
+            {loading ? "Submitting..." : "Submit Recipe"}
           </button>
         </form>
       </div>

@@ -14,6 +14,12 @@ const PALETTE = {
   black: "#000000",
 };
 
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+};
+
 // Debounce helper
 function useDebounced(value, delay = 450) {
   const [debounced, setDebounced] = useState(value);
@@ -27,7 +33,6 @@ function useDebounced(value, delay = 450) {
 export default function SearchPage() {
   const navigate = useNavigate();
 
-  // UI inputs
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounced(query, 400);
 
@@ -37,14 +42,12 @@ export default function SearchPage() {
   const [sort, setSort] = useState("newest");
 
   const [page, setPage] = useState(1);
-  const [limit] = useState(12);
+  const limit = 12;
 
-  // Data state
   const [recipes, setRecipes] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Filters
   const cuisines = useMemo(
     () => ["All", "Indian", "Italian", "Chinese", "Mexican", "American", "Fusion"],
     []
@@ -62,78 +65,52 @@ export default function SearchPage() {
     []
   );
 
-  // Build query parameters
-  const buildQueryParams = () => {
-    const params = new URLSearchParams();
-    if (debouncedQuery?.trim()) params.set("search", debouncedQuery.trim());
-    if (cuisine && cuisine !== "All") params.set("cuisine", cuisine);
-    if (dietType && dietType !== "All") params.set("dietType", dietType);
-    if (maxTime) params.set("maxTime", maxTime);
-    if (sort) params.set("sort", sort);
-    params.set("page", page);
-    params.set("limit", limit);
-    return params.toString();
+  // ✅ Single fetch function used by both effects
+  const fetchResults = async (currentPage = page) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedQuery?.trim()) params.set("search", debouncedQuery.trim());
+      if (cuisine && cuisine !== "All") params.set("cuisine", cuisine);
+      if (dietType && dietType !== "All") params.set("dietType", dietType);
+      if (maxTime) params.set("maxTime", maxTime);
+      if (sort) params.set("sort", sort);
+      params.set("page", currentPage);
+      params.set("limit", limit);
+
+      const res = await fetch(`${API_URL}/api/recipes?${params.toString()}`);
+      const data = await safeJson(res); // ✅ Safe parse
+
+      if (res.ok) {
+        const list = Array.isArray(data) ? data : data.recipes || [];
+        setRecipes(list);
+        setTotal(data.total || list.length);
+      } else {
+        toast.error(data.message || "Failed to search recipes");
+        setRecipes([]);
+        setTotal(0);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      toast.error("Network error. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Fetch results on filter changes
+  // ✅ Reset to page 1 and fetch when filters change
   useEffect(() => {
-    const fetchResults = async () => {
-      setLoading(true);
-      try {
-        const queryStr = buildQueryParams();
-        const res = await fetch(`${API_URL}/api/recipes?${queryStr}`);
-        const data = await res.json();
-
-        if (res.ok) {
-          const list = Array.isArray(data) ? data : data.recipes || [];
-          setRecipes(list);
-          setTotal(data.total || list.length);
-        } else {
-          toast.error(data.message || "Failed to search recipes");
-          setRecipes([]);
-          setTotal(0);
-        }
-      } catch (error) {
-        console.error("Search error:", error);
-        toast.error("Network error");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     setPage(1);
-    fetchResults();
-    // eslint-disable-next-line
-  }, [debouncedQuery, cuisine, dietType, maxTime, sort]);
+    fetchResults(1);
+  }, [debouncedQuery, cuisine, dietType, maxTime, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch when page changes
+  // ✅ Fetch when page changes (but not on initial render)
   useEffect(() => {
-    const fetchPage = async () => {
-      setLoading(true);
-      try {
-        const queryStr = buildQueryParams();
-        const res = await fetch(`${API_URL}/api/recipes?${queryStr}`);
-        const data = await res.json();
-
-        if (res.ok) {
-          const list = Array.isArray(data) ? data : data.recipes || [];
-          setRecipes(list);
-          setTotal(data.total || list.length);
-        }
-      } catch {
-        toast.error("Failed to load page");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (page > 1) fetchPage();
-    // eslint-disable-next-line
-  }, [page]);
+    if (page > 1) fetchResults(page);
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  // Handlers
   const clearFilters = () => {
     setQuery("");
     setCuisine("");
@@ -146,7 +123,9 @@ export default function SearchPage() {
   const handleView = (id) => navigate(`/recipe/${id}`);
 
   const getImageUrl = (r) =>
-    r.images?.[0] ? `${API_URL}/${r.images[0]}` : "/no-image.png";
+    r.images?.[0]
+      ? `${API_URL}/${r.images[0].replace(/\\/g, "/")}`
+      : "/no-image.png";
 
   return (
     <div
@@ -157,7 +136,7 @@ export default function SearchPage() {
       <div
         className="relative h-44 md:h-56 rounded-b-2xl overflow-hidden"
         style={{
-          backgroundImage: `url("/search-hero.jpg")`, // <-- put your image inside /public
+          backgroundImage: `url("/search-hero.jpg")`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           filter: "brightness(0.95)",
@@ -333,20 +312,14 @@ export default function SearchPage() {
           <>
             <div
               className="grid gap-6 sm:gap-8"
-              style={{
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(260px, 1fr))",
-              }}
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}
             >
               {recipes.map((r) => (
                 <div
                   key={r._id}
                   onClick={() => handleView(r._id)}
                   className="rounded-2xl shadow-md overflow-hidden transition-transform hover:scale-[1.02] cursor-pointer"
-                  style={{
-                    background: "white",
-                    border: `1px solid ${PALETTE.tan}`,
-                  }}
+                  style={{ background: "white", border: `1px solid ${PALETTE.tan}` }}
                 >
                   <img
                     src={getImageUrl(r)}
@@ -363,9 +336,11 @@ export default function SearchPage() {
                     </h3>
 
                     <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                      {typeof r.ingredients === "string"
-                        ? r.ingredients.slice(0, 80) +
-                          (r.ingredients.length > 80 ? "..." : "")
+                      {/* ✅ Safe ingredients display — handles array or string */}
+                      {Array.isArray(r.ingredients)
+                        ? r.ingredients.join(", ").slice(0, 80) + (r.ingredients.join(", ").length > 80 ? "..." : "")
+                        : typeof r.ingredients === "string"
+                        ? r.ingredients.slice(0, 80) + (r.ingredients.length > 80 ? "..." : "")
                         : ""}
                     </p>
 
@@ -385,10 +360,7 @@ export default function SearchPage() {
                           handleView(r._id);
                         }}
                         className="px-3 py-2 rounded-lg"
-                        style={{
-                          background: PALETTE.brown,
-                          color: "white",
-                        }}
+                        style={{ background: PALETTE.brown, color: "white" }}
                       >
                         View
                       </button>
@@ -408,6 +380,7 @@ export default function SearchPage() {
                   border: `1px solid ${PALETTE.tan}`,
                   background: page > 1 ? "white" : "#eee9df",
                   color: PALETTE.brown,
+                  cursor: page <= 1 ? "not-allowed" : "pointer",
                 }}
               >
                 Prev
@@ -415,10 +388,7 @@ export default function SearchPage() {
 
               <div
                 className="px-4 py-2 rounded-md"
-                style={{
-                  border: `1px solid ${PALETTE.tan}`,
-                  background: "white",
-                }}
+                style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
               >
                 Page {page} / {totalPages}
               </div>
@@ -431,6 +401,7 @@ export default function SearchPage() {
                   border: `1px solid ${PALETTE.tan}`,
                   background: page < totalPages ? "white" : "#eee9df",
                   color: PALETTE.brown,
+                  cursor: page >= totalPages ? "not-allowed" : "pointer",
                 }}
               >
                 Next

@@ -56,7 +56,9 @@ const SignUpPage = () => {
         }),
       });
 
-      const data = await res.json();
+      // ✅ Safe parsing — handles empty bodies without crashing
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (res.ok) {
         // Save token + user
@@ -76,11 +78,16 @@ const SignUpPage = () => {
         toast.success(`Welcome to PantryPal, ${data.name}!`);
         navigate("/home");
       } else {
-        toast.error(data.message || "Signup failed");
+        toast.error(data.message || "Signup failed. Please try again.");
       }
     } catch (err) {
-      console.error(err);
-      toast.error("Server error");
+      if (err instanceof SyntaxError) {
+        // JSON.parse failed — server sent a non-JSON response
+        toast.error("Unexpected server response. Please try again.");
+      } else {
+        toast.error("Unable to connect to server. Check your connection.");
+      }
+      console.error("Signup error:", err);
     } finally {
       setLoading(false);
     }
@@ -198,7 +205,11 @@ const SignUpPage = () => {
               type="submit"
               disabled={loading}
               className="px-6 py-2 rounded-lg text-white w-full"
-              style={{ background: PALETTE.brown }}
+              style={{
+                background: PALETTE.brown,
+                opacity: loading ? 0.7 : 1,
+                cursor: loading ? "not-allowed" : "pointer",
+              }}
             >
               {loading ? "Creating..." : "Sign Up"}
             </button>

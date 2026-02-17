@@ -2,13 +2,19 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import backgroundImage from "../assets/background.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL;   // ✅ Use Render backend URL
+const API_URL = import.meta.env.VITE_API_URL;
 
 const PALETTE = {
   cream: "#F2E3C6",
   tan: "#E7D2AC",
   brown: "#B57655",
   beige: "#F3D79E",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 const ContactPage = () => {
@@ -30,16 +36,17 @@ const ContactPage = () => {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
         toast.success("Message sent successfully!");
         setForm({ name: "", email: "", message: "" });
       } else {
-        toast.error(data.message || "Failed to send");
+        toast.error(data.message || "Failed to send message");
       }
     } catch (err) {
-      toast.error("Server error");
+      console.error("Contact error:", err);
+      toast.error("Server error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -47,7 +54,7 @@ const ContactPage = () => {
 
   return (
     <div
-      className="kanit-light min-h-screen flex items-center justify-center bg-[var(--cream)]"
+      className="kanit-light min-h-screen flex items-center justify-center"
       style={{
         backgroundImage: `url('${backgroundImage}')`,
         backgroundSize: "cover",
@@ -81,7 +88,7 @@ const ContactPage = () => {
 
         <p className="text-center text-gray-700 mb-10 max-w-md mx-auto">
           Have questions, feedback or need support?
-          <br />We’d love to hear from you.
+          <br />We'd love to hear from you.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -93,10 +100,7 @@ const ContactPage = () => {
               value={form.name}
               onChange={handleChange}
               className="input input-bordered w-full"
-              style={{
-                borderColor: PALETTE.tan,
-                background: "white",
-              }}
+              style={{ borderColor: PALETTE.tan, background: "white" }}
               required
             />
           </div>
@@ -109,10 +113,7 @@ const ContactPage = () => {
               value={form.email}
               onChange={handleChange}
               className="input input-bordered w-full"
-              style={{
-                borderColor: PALETTE.tan,
-                background: "white",
-              }}
+              style={{ borderColor: PALETTE.tan, background: "white" }}
               required
             />
           </div>
@@ -124,10 +125,7 @@ const ContactPage = () => {
               value={form.message}
               onChange={handleChange}
               className="textarea textarea-bordered w-full h-32"
-              style={{
-                borderColor: PALETTE.tan,
-                background: "white",
-              }}
+              style={{ borderColor: PALETTE.tan, background: "white" }}
               required
             ></textarea>
           </div>
@@ -139,6 +137,8 @@ const ContactPage = () => {
             style={{
               background: PALETTE.brown,
               borderColor: PALETTE.brown,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
             }}
           >
             {loading ? "Sending..." : "Send Message"}

@@ -9,17 +9,31 @@ const PALETTE = {
   brown: "#B57655",
 };
 
+// ✅ Safe JSON parse helper used throughout
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+};
+
 const AllRecipes = () => {
   const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true); // ✅ Added loading state
   const navigate = useNavigate();
 
   const fetchRecipes = async () => {
     try {
       const res = await fetch(`${API_URL}/api/recipes`);
-      const data = await res.json();
-      setRecipes(data);
+      const data = await safeJson(res); // ✅ Safe parse
+
+      if (res.ok) {
+        setRecipes(Array.isArray(data) ? data : data.recipes || []);
+      } else {
+        console.error("Failed to fetch recipes:", data.message);
+      }
     } catch (err) {
       console.error("Error fetching recipes:", err);
+    } finally {
+      setLoading(false); // ✅ Always stop loading
     }
   };
 
@@ -39,7 +53,10 @@ const AllRecipes = () => {
         All Recipes 🍽️
       </h1>
 
-      {recipes.length === 0 ? (
+      {/* ✅ Loading state shown to user */}
+      {loading ? (
+        <p className="text-center text-gray-700 text-lg">Loading recipes...</p>
+      ) : recipes.length === 0 ? (
         <p className="text-center text-gray-700 text-lg">No recipes found.</p>
       ) : (
         <div
@@ -70,11 +87,9 @@ const AllRecipes = () => {
                 >
                   {recipe.title}
                 </h3>
-
                 <p className="text-gray-600 text-sm mt-1">
                   {recipe.cuisine || "Cuisine"}
                 </p>
-
                 <div className="flex justify-between items-center mt-3">
                   <span className="text-sm text-gray-700">
                     ⏱ {recipe.cookingTime || "--"} mins

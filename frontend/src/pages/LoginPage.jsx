@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import backgroundImage from "../assets/background.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL; // ✅ Production-safe API base
+const API_URL = import.meta.env.VITE_API_URL;
 
 const PALETTE = {
   beige: "#F3D79E",
@@ -15,16 +15,21 @@ const PALETTE = {
   black: "#000000",
 };
 
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+};
+
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (localStorage.getItem("token")) navigate("/home");
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,23 +48,20 @@ const LoginPage = () => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
-        // Backend returns: { token, user: { _id, name, email } }
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
-
-        window.dispatchEvent(new Event("storage")); // update nav instantly
-
-        toast.success(`Welcome back, ${data.user.name || "friend"}!`);
+        window.dispatchEvent(new Event("storage"));
+        toast.success(`Welcome back, ${data.user?.name || "friend"}!`); // ✅ Optional chaining
         navigate("/home");
       } else {
         toast.error(data.message || "Invalid credentials");
       }
     } catch (err) {
       console.error("Login error:", err);
-      toast.error("Server error");
+      toast.error("Server error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,6 @@ const LoginPage = () => {
       }}
     >
       <div className="w-full max-w-6xl mx-4 md:mx-0 rounded-2xl overflow-hidden shadow-2xl grid grid-cols-1 md:grid-cols-2">
-        
         {/* LEFT: Form */}
         <div className="p-8 md:p-12 bg-white">
           <h2
@@ -122,7 +123,11 @@ const LoginPage = () => {
                 type="submit"
                 disabled={loading}
                 className="px-6 py-2 rounded-lg text-white"
-                style={{ background: PALETTE.brown }}
+                style={{
+                  background: PALETTE.brown,
+                  opacity: loading ? 0.7 : 1,
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
               >
                 {loading ? "Signing in..." : "Sign In"}
               </button>
@@ -131,7 +136,7 @@ const LoginPage = () => {
 
           <div className="mt-6 text-sm text-gray-600">
             <p>
-              Don’t have an account?{" "}
+              Don't have an account?{" "}
               <Link
                 to="/signup"
                 className="font-semibold"
@@ -153,7 +158,6 @@ const LoginPage = () => {
             <p className="mb-6">
               Register with your personal details to access all features.
             </p>
-
             <Link
               to="/signup"
               className="inline-block px-6 py-2 rounded-full border"
@@ -167,7 +171,6 @@ const LoginPage = () => {
             </Link>
           </div>
 
-          {/* Decorative curved overlay */}
           <svg
             viewBox="0 0 100 100"
             preserveAspectRatio="none"

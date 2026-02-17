@@ -2,10 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
-// ✅ Always use deployed backend URL from env
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Bakery UI Palette
 const PALETTE = {
   beige: "#F3D79E",
   brown: "#B57655",
@@ -14,6 +12,12 @@ const PALETTE = {
   nude: "#D0B79A",
   caramel: "#BA8C73",
   black: "#000000",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 const EditRecipe = () => {
@@ -30,44 +34,46 @@ const EditRecipe = () => {
     cookingTime: "",
   });
 
-  // Fetch recipe details
+  const [loading, setLoading] = useState(false); // ✅ Loading state for submit button
+
   useEffect(() => {
     fetchRecipe();
-  }, [id]);
+  }, [id]); // ✅ id in dependency array
 
   const fetchRecipe = async () => {
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}`);
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
+        const recipe = data.recipe || data;
         setFormData({
-          title: data.title,
-          ingredients: Array.isArray(data.ingredients)
-            ? data.ingredients.join(", ")
-            : data.ingredients,
-          steps: Array.isArray(data.steps)
-            ? data.steps.join(". ")
-            : data.steps,
-          cuisine: data.cuisine || "",
-          dietType: data.dietType || "",
-          cookingTime: data.cookingTime || "",
+          title: recipe.title || "",
+          ingredients: Array.isArray(recipe.ingredients)
+            ? recipe.ingredients.join(", ")
+            : recipe.ingredients || "",
+          steps: Array.isArray(recipe.steps)
+            ? recipe.steps.join(". ")
+            : recipe.steps || "",
+          cuisine: recipe.cuisine || "",
+          dietType: recipe.dietType || "",
+          cookingTime: recipe.cookingTime || "",
         });
       } else {
-        toast.error("Recipe not found");
+        toast.error(data.message || "Recipe not found");
         navigate("/myrecipes");
       }
     } catch (err) {
+      console.error("Error loading recipe:", err);
       toast.error("Server error while loading recipe");
+      navigate("/myrecipes");
     }
   };
 
-  // Handle changes
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Update recipe
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -75,6 +81,8 @@ const EditRecipe = () => {
       toast.error("You must log in first!");
       return navigate("/login");
     }
+
+    setLoading(true); // ✅ Start loading
 
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}`, {
@@ -86,7 +94,7 @@ const EditRecipe = () => {
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
         toast.success("Recipe updated successfully!");
@@ -95,7 +103,10 @@ const EditRecipe = () => {
         toast.error(data.message || "Failed to update recipe");
       }
     } catch (err) {
+      console.error("Error updating recipe:", err);
       toast.error("Server error while updating");
+    } finally {
+      setLoading(false); // ✅ Always reset loading
     }
   };
 
@@ -111,7 +122,6 @@ const EditRecipe = () => {
           border: `1px solid ${PALETTE.tan}`,
         }}
       >
-        {/* Title */}
         <h2
           className="text-4xl font-bold text-center mb-6"
           style={{ color: PALETTE.brown }}
@@ -119,7 +129,6 @@ const EditRecipe = () => {
           Edit Recipe ✏️
         </h2>
 
-        {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
           className="mb-6 px-4 py-2 rounded-xl shadow"
@@ -132,7 +141,6 @@ const EditRecipe = () => {
           ← Back
         </button>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           {/* Title */}
           <div>
@@ -228,18 +236,24 @@ const EditRecipe = () => {
               name="cookingTime"
               value={formData.cookingTime}
               onChange={handleChange}
+              min="1"
               className="w-full px-4 py-3 rounded-xl outline-none"
               style={{ border: `1px solid ${PALETTE.tan}`, background: "white" }}
             />
           </div>
 
-          {/* Update Button */}
           <button
             type="submit"
+            disabled={loading}
             className="py-3 text-lg rounded-xl shadow-md"
-            style={{ background: PALETTE.brown, color: "white" }}
+            style={{
+              background: PALETTE.brown,
+              color: "white",
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
           >
-            Update Recipe
+            {loading ? "Updating..." : "Update Recipe"}
           </button>
         </form>
       </div>

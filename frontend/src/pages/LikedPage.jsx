@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const API_URL = import.meta.env.VITE_API_URL; // ✅ Always use production backend
+const API_URL = import.meta.env.VITE_API_URL;
 
-// Bakery Color Palette
 const PALETTE = {
   beige: "#F3D79E",
   brown: "#B57655",
@@ -15,12 +14,18 @@ const PALETTE = {
   black: "#000000",
 };
 
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+};
+
 const LikedPage = () => {
   const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true); // ✅ Added loading state
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  // ❌ Remove from liked list
   const handleUnliked = async (id, e) => {
     e.stopPropagation();
 
@@ -30,7 +35,7 @@ const LikedPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (res.ok) {
         toast.success("Removed from liked");
@@ -39,13 +44,16 @@ const LikedPage = () => {
         toast.error(data.message || "Failed to update like");
       }
     } catch (error) {
+      console.error("Error removing like:", error);
       toast.error("Error removing like");
     }
   };
 
-  // ⭐ Fetch liked recipes
   useEffect(() => {
-    if (!token) return navigate("/login");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
     const fetchLiked = async () => {
       try {
@@ -60,16 +68,35 @@ const LikedPage = () => {
           return;
         }
 
-        const data = await res.json();
-        setRecipes(Array.isArray(data) ? data : []);
+        const data = await safeJson(res); // ✅ Safe parse
+
+        if (res.ok) {
+          setRecipes(Array.isArray(data) ? data : []);
+        } else {
+          toast.error(data.message || "Failed to load liked recipes");
+        }
       } catch (error) {
         console.error("Error loading liked recipes:", error);
         toast.error("Failed to load liked recipes");
+      } finally {
+        setLoading(false); // ✅ Always stop loading
       }
     };
 
     fetchLiked();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ✅ Loading screen
+  if (loading) {
+    return (
+      <div
+        className="kanit-light flex justify-center items-center min-h-screen text-xl"
+        style={{ color: PALETTE.brown }}
+      >
+        Loading liked recipes…
+      </div>
+    );
+  }
 
   return (
     <div
@@ -86,9 +113,8 @@ const LikedPage = () => {
       {recipes.length === 0 ? (
         <div className="text-center mt-20">
           <p className="text-lg mb-4" style={{ color: PALETTE.caramel }}>
-            You haven’t liked any recipes yet.
+            You haven't liked any recipes yet.
           </p>
-
           <button
             onClick={() => navigate("/home")}
             className="px-6 py-3 rounded-xl shadow"
@@ -104,21 +130,15 @@ const LikedPage = () => {
       ) : (
         <div
           className="grid gap-8"
-          style={{
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          }}
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}
         >
           {recipes.map((recipe) => (
             <div
               key={recipe._id}
               onClick={() => navigate(`/recipe/${recipe._id}`)}
               className="rounded-2xl shadow-md overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
-              style={{
-                background: "white",
-                border: `1px solid ${PALETTE.tan}`,
-              }}
+              style={{ background: "white", border: `1px solid ${PALETTE.tan}` }}
             >
-              {/* ⭐ Image */}
               <img
                 src={
                   recipe.images?.length
@@ -138,16 +158,16 @@ const LikedPage = () => {
                 </h3>
 
                 <p className="text-sm opacity-80 line-clamp-2">
+                  {/* ✅ Safe ingredients display */}
                   {Array.isArray(recipe.ingredients)
                     ? recipe.ingredients.join(", ")
-                    : recipe.ingredients}
+                    : recipe.ingredients || ""}
                 </p>
 
                 <p className="mt-3 text-sm opacity-80">
-                  👍 {recipe.likes} likes
+                  👍 {recipe.likes || 0} likes
                 </p>
 
-                {/* ❌ Remove like */}
                 <button
                   onClick={(e) => handleUnliked(recipe._id, e)}
                   className="mt-4 px-4 py-2 rounded-xl text-white"

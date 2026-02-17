@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL; // ✅ Render-safe
+const API_URL = import.meta.env.VITE_API_URL;
 
-// Bakery Palette
 const PALETTE = {
   beige: "#F3D79E",
   brown: "#B57655",
@@ -13,6 +12,12 @@ const PALETTE = {
   nude: "#D0B79A",
   caramel: "#BA8C73",
   black: "#000000",
+};
+
+// ✅ Safe JSON parse helper
+const safeJson = async (res) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 };
 
 const ProfilePage = () => {
@@ -35,53 +40,64 @@ const ProfilePage = () => {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  // Fetch Profile + Stats
   const fetchProfile = async () => {
     try {
       const res = await fetch(`${API_URL}/api/users/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const data = await res.json();
+      // ✅ Handle 401 session expiry
+      if (res.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
+
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (!res.ok) {
         toast.error(data.message || "Failed to load profile");
         return;
       }
 
-      setProfile(data.user || data); // backend may return user or wrapped object
+      setProfile(data.user || data);
 
-      const statsRes = await fetch(`${API_URL}/api/users/me/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const statsData = await statsRes.json();
-
-      setStats({
-        totalRecipes: statsData.totalRecipes || 0,
-        totalLikes: statsData.totalLikes || 0,
-        totalFavorites: statsData.totalFavorites || 0,
-      });
-
-      setLoading(false);
+      // ✅ Fetch stats separately with its own error handling
+      try {
+        const statsRes = await fetch(`${API_URL}/api/users/me/stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const statsData = await safeJson(statsRes);
+        if (statsRes.ok) {
+          setStats({
+            totalRecipes: statsData.totalRecipes || 0,
+            totalLikes: statsData.totalLikes || 0,
+            totalFavorites: statsData.totalFavorites || 0,
+          });
+        }
+      } catch {
+        // Stats failing shouldn't break the whole page
+        console.warn("Failed to load stats");
+      }
     } catch (error) {
+      console.error("Profile load error:", error);
       toast.error("Failed to load profile");
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
     if (!token) {
-      navigate("/signup");
+      navigate("/login"); // ✅ Redirect to login instead of signup
       return;
     }
     fetchProfile();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle Edit Form
   const handleEditChange = (e) => {
     const { name, files, value } = e.target;
-
     if (name === "profileImage") {
       setEditForm((prev) => ({ ...prev, profileImage: files[0] }));
     } else {
@@ -96,7 +112,6 @@ const ProfilePage = () => {
     fd.append("name", editForm.name);
     fd.append("email", editForm.email);
     fd.append("bio", editForm.bio);
-
     if (editForm.profileImage) {
       fd.append("profileImage", editForm.profileImage);
     }
@@ -108,7 +123,7 @@ const ProfilePage = () => {
         body: fd,
       });
 
-      const data = await res.json();
+      const data = await safeJson(res); // ✅ Safe parse
 
       if (!res.ok) {
         toast.error(data.message || "Profile update failed");
@@ -119,11 +134,11 @@ const ProfilePage = () => {
       setEditModal(false);
       fetchProfile();
     } catch (error) {
-      toast.error("Update failed");
+      console.error("Profile update error:", error);
+      toast.error("Update failed. Please try again.");
     }
   };
 
-  // Loading Screen
   if (loading)
     return (
       <div
@@ -146,13 +161,9 @@ const ProfilePage = () => {
         My Profile
       </h1>
 
-      {/* Profile Card */}
       <div
         className="max-w-3xl mx-auto p-8 rounded-2xl shadow-xl"
-        style={{
-          background: "white",
-          border: `1px solid ${PALETTE.tan}`,
-        }}
+        style={{ background: "white", border: `1px solid ${PALETTE.tan}` }}
       >
         <div className="flex flex-col items-center text-center">
           <img
@@ -178,28 +189,24 @@ const ProfilePage = () => {
             <p className="text-gray-700 mt-2 italic">{profile.bio}</p>
           )}
 
-          {/* Edit Button */}
           <button
             onClick={() => {
               setEditModal(true);
               setEditForm({
-                name: profile.name,
-                email: profile.email,
-                bio: profile.bio || "",
+                name: profile?.name || "",
+                email: profile?.email || "",
+                bio: profile?.bio || "",
                 profileImage: null,
               });
             }}
             className="px-5 py-2 rounded-xl shadow mt-5"
-            style={{
-              background: PALETTE.brown,
-              color: "white",
-            }}
+            style={{ background: PALETTE.brown, color: "white" }}
           >
             ✏️ Edit Profile
           </button>
         </div>
 
-        {/* Stats Section */}
+        {/* Stats */}
         <div className="grid md:grid-cols-3 gap-5 mt-10">
           {[
             { label: "Recipes Created", value: stats.totalRecipes },
@@ -228,7 +235,7 @@ const ProfilePage = () => {
 
       {/* Edit Profile Modal */}
       {editModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center px-4 z-50">
           <form
             onSubmit={handleUpdateProfile}
             className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md"
@@ -241,31 +248,27 @@ const ProfilePage = () => {
               Edit Profile
             </h2>
 
-            <label className="font-semibold" style={{ color: PALETTE.brown }}>
-              Name
-            </label>
+            <label className="font-semibold" style={{ color: PALETTE.brown }}>Name</label>
             <input
               type="text"
               name="name"
               value={editForm.name}
               onChange={handleEditChange}
               className="input input-bordered w-full mb-3"
+              required
             />
 
-            <label className="font-semibold" style={{ color: PALETTE.brown }}>
-              Email
-            </label>
+            <label className="font-semibold" style={{ color: PALETTE.brown }}>Email</label>
             <input
               type="email"
               name="email"
               value={editForm.email}
               onChange={handleEditChange}
               className="input input-bordered w-full mb-3"
+              required
             />
 
-            <label className="font-semibold" style={{ color: PALETTE.brown }}>
-              Bio
-            </label>
+            <label className="font-semibold" style={{ color: PALETTE.brown }}>Bio</label>
             <textarea
               name="bio"
               value={editForm.bio}
@@ -273,9 +276,7 @@ const ProfilePage = () => {
               className="textarea textarea-bordered w-full mb-3"
             />
 
-            <label className="font-semibold" style={{ color: PALETTE.brown }}>
-              Profile Image
-            </label>
+            <label className="font-semibold" style={{ color: PALETTE.brown }}>Profile Image</label>
             <input
               type="file"
               name="profileImage"
@@ -284,15 +285,14 @@ const ProfilePage = () => {
               className="file-input file-input-bordered w-full mb-4"
             />
 
-            {/* Preview */}
             {editForm.profileImage && (
               <img
                 src={URL.createObjectURL(editForm.profileImage)}
                 className="w-24 h-24 rounded-full mx-auto mb-4 object-cover shadow"
+                alt="Preview"
               />
             )}
 
-            {/* Buttons */}
             <div className="flex justify-between mt-4">
               <button
                 type="button"
