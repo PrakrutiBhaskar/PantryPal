@@ -6,41 +6,44 @@ import rateLimiter from "./middleware/rateLimiter.js";
 import userRoutes from "./routes/userRoutes.js";
 import cors from "cors";
 import path from "path";
-import contactRoutes from "./routes/contactRoutes.js";  
+import contactRoutes from "./routes/contactRoutes.js";
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-if (process.env.NODE_ENV !== "production") {
-  const allowedOrigins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "https://your-frontend-domain.com",
-  ];
+// ✅ CORS runs in ALL environments — both dev and production
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "https://pantrypal-hva6.onrender.com",  // ✅ your real frontend URL
+];
 
-  app.use(
-    cors({
-      origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          console.log("❌ Blocked CORS origin:", origin);
-          callback(new Error("Not allowed by CORS"));
-        }
-      },
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-      credentials: true,
-    })
-  );
-}
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow server-to-server requests (no origin) and listed origins
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log("❌ Blocked CORS origin:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+// ✅ Handle preflight OPTIONS requests for all routes
+app.options("*", cors());
 
 const __dirname = path.resolve();
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 app.use(express.json());
 app.use(rateLimiter);
 
