@@ -51,10 +51,14 @@ app.use("/api/users", userRoutes);
 app.use("/api/contact", contactRoutes);
 
 // PRODUCTION FRONTEND
-const frontendDist = path.join(__dirname, "../../frontend/dist");
+const frontendDist = path.join(__dirname, "../../../frontend/dist");
 
 console.log("📁 Frontend dist path:", frontendDist);
 console.log("✅ index.html exists:", fs.existsSync(path.join(frontendDist, "index.html")));
+console.log("__dirname is:", __dirname);
+console.log("Project src:", path.join(__dirname, ".."));
+console.log("Project root:", path.join(__dirname, "../.."));
+console.log("Checking path:", frontendDist);
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(frontendDist));
