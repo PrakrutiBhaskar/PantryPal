@@ -6,6 +6,7 @@ import rateLimiter from "./middleware/rateLimiter.js";
 import userRoutes from "./routes/userRoutes.js";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import contactRoutes from "./routes/contactRoutes.js";
 
 dotenv.config();
@@ -13,18 +14,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// ✅ CORS runs in ALL environments — both dev and production
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:5174",
-  "https://pantrypal-hva6.onrender.com",  // ✅ your real frontend URL
+  "https://pantrypal-hva6.onrender.com",
+  "https://pantrypal-5djy.onrender.com",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow server-to-server requests (no origin) and listed origins
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -38,7 +38,6 @@ app.use(
   })
 );
 
-// ✅ Handle preflight OPTIONS requests for all routes
 app.options("*", cors());
 
 const __dirname = path.resolve();
@@ -47,16 +46,21 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.json());
 app.use(rateLimiter);
 
-// ROUTES
+// API ROUTES
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/contact", contactRoutes);
 
 // PRODUCTION FRONTEND
+const frontendDist = path.join(__dirname, "../../frontend/dist");
+
+console.log("📁 Frontend dist path:", frontendDist);
+console.log("✅ index.html exists:", fs.existsSync(path.join(frontendDist, "index.html")));
+
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  app.use(express.static(frontendDist));
   app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+    res.sendFile(path.join(frontendDist, "index.html"));
   });
 }
 
